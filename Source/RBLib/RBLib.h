@@ -92,6 +92,9 @@
 // DMA
 #include "Dma.h"
 
+// Alternate function I/O
+#include "Afio.h"
+
 // Äנאיגונû ףסענמיסעג
 #include "Driver.h"
 
