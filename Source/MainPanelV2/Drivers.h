@@ -8,11 +8,13 @@ namespace MainPanel
 {
 	template
 		<
-			class Board
+			class BoardType
 		>
 	class Drivers
 	{
 	public:
+		typedef BoardType Board;
+		
 		typedef Rblib::Driver::Bus6800
 			<
 				typename Board::DisplayConnection::Port,
@@ -30,6 +32,9 @@ namespace MainPanel
 		typedef Rblib::FbgFont FontType;
 		static FontType GeneralFont;
 		static FontType MenuBigFont;
+		
+		typedef Rblib::Driver::Rs485<typename Board::Rs485Interface> Rs485Type;
+		Rs485Type Rs485;
 	public:
 		static void Init()
 		{

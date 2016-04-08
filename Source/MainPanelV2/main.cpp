@@ -6,6 +6,9 @@
 #include "Drivers.h"
 #include "GUI/GUI.h"
 #include "Controllers.h"
+#include "KeyboardScanner.h"
+
+typedef KeyboardScanner<Drivers::Board::Gpio::D, 4, 3, 2, 1, 15, 14, 13, 12> keyboardScanner;
 
 void GetMainWindowDisplayData(MainWindowDisplayData &displayData)
 {
@@ -23,9 +26,31 @@ void GetMainWindowDisplayData(MainWindowDisplayData &displayData)
 	displayData.ActiveDriveController.OperatingTime = ActiveDriveControllerParams::GetOperatingTime();
 }
 
+static void OnTenKiloHertzTimerTick()
+{
+	ModBusState::PacketTimeoutDetectorTick();
+}
+
+static void OnKiloHertzTimerTick()
+{
+	display.Tick();
+	keyboardScanner::Tick();
+	ActiveDriveControllerParams::Tick();
+}
+
+char lastKey = 0;
+
+void OnKeyDownCallback(char key)
+{
+	lastKey = key;
+}
+
 int main()
 {
 	Drivers::Init();
+	
+	Drivers::Board::TenKiloHertzTimer::UpdateInterruptHandler = OnTenKiloHertzTimerTick;
+	Drivers::Board::KiloHertzTimer::UpdateInterruptHandler = OnKiloHertzTimerTick;
 	
 	display.SelectContext(&Drivers::DrawContext);
 			
@@ -38,9 +63,55 @@ int main()
 	DesctopInit();
 	ControllerParamsMenuEndEditorsInit();
 	
+	keyboardScanner::Init();
+	keyboardScanner::SetOnKeyDown(OnKeyDownCallback);
+	
+	ModBusState::Init();
+	
+	// начали работу
+	Event e(Rtc::GetTime(), EventProgramStart);
+	Events::Push(e);
+	
 	while(1)
 	{
-		display.Tick();
-		desctop.Draw();
+		if (lastKey)
+		{
+			if (mainMenu.Visible())
+			{
+				mainMenu.OnKeyDown(lastKey);
+				if ('E' == lastKey)
+				{
+					if (!mainMenu.Visible())
+						desctop.ShowWindow(wndIdMain);
+				}
+			}
+			else
+			{
+				if (!desctop.OnKeyDown(lastKey))
+				{
+					if (desctop.IsWindowVisible(wndIdMain))
+					{
+						if (13 == lastKey)
+							mainMenu.Show();
+					}
+					else
+					{
+						mainMenu.OnKeyDown(lastKey);
+					}
+				}
+			}
+			lastKey = 0;
+		}
+		
+		if (mainMenu.Visible())
+		{
+			mainMenu.Draw();
+		}
+		else
+		{
+			//DrawDebugRegistersScreen();
+			//DrawMainScreen();
+			desctop.Draw();
+		}
 	}
 }

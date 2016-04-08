@@ -3,6 +3,7 @@
 #define BOARD_H
 
 #include "../RbLib/Rblib.h"
+#include "Rs485InterfaceImpl.h"
 
 namespace MainPanel
 {
@@ -58,6 +59,9 @@ namespace MainPanel
 				Rcc::EnableClockPortC();
 				Rcc::EnableClockPortD();
 				Rcc::EnableClockPortE();
+				Rcc::EnableClockTimer1();
+				Rcc::EnableClockTimer2();
+				Rcc::EnableClockPowerInterface();
 				Rcc::EnableClockUsart2();
 				Rcc::EnableClockUsart3();
 				Rcc::EnableClockSpi3();
@@ -98,11 +102,53 @@ namespace MainPanel
 			}
 		};
 		
+		typedef Timer::Timer1 TenKiloHertzTimer;
+		static const unsigned int TenKiloHertzTickFrequency = 10000;
+		
+		typedef Timer::Timer2 KiloHertzTimer;
+		static const unsigned int KiloHertzTickFrequency = 1000;
+		
+		typedef Usart::Usart2 MainComPort;
+		
+		typedef Rs485InterfaceImpl<Usart::Usart2, Gpio::D, 7> Rs485Interface;
 	public:
 		static void Init()
 		{
 			Clock::Init();
 			DisplayConnection::Init();
+			
+			TenKiloHertzTimer::SetPrescaler(72);
+			TenKiloHertzTimer::SetMaxCount(1000000 / TenKiloHertzTickFrequency);
+			TenKiloHertzTimer::Start();
+			TenKiloHertzTimer::ClearUpdateInterruptFlag();
+			TenKiloHertzTimer::EnableUpdateInterrupt();
+			Nvic::InterruptEnable(Nvic::InterruptVector_TIM1_UP);
+			
+			KiloHertzTimer::SetPrescaler(72);
+			KiloHertzTimer::SetMaxCount(1000000 / TenKiloHertzTickFrequency);
+			KiloHertzTimer::Start();
+			KiloHertzTimer::ClearUpdateInterruptFlag();
+			KiloHertzTimer::EnableUpdateInterrupt();
+			Nvic::InterruptEnable(Nvic::InterruptVector_TIM2);
+			
+			Gpio::D::SetMode(8, Gpio::D::ModeOutput);
+			Gpio::D::SetConfig(8, Gpio::D::ConfigOutputAlternatePushPull);
+			Afio::RemapUsart3(3);
+			
+			MainComPort::Init(36000000, 9600, MainComPort::StopBits1, MainComPort::ParityNone);
+			//MainComPort::OnRead = OnUsartRead;
+			//MainComPort::OnWriteComplete = OnWriteComplete;
+			MainComPort::Enable();
+			
+			// 485
+			// RE/DE
+			Gpio::D::SetMode(7, Gpio::D::ModeOutput);
+			Gpio::D::SetConfig(7, Gpio::D::ConfigOutputPushPull);
+			Gpio::D::ClearBit(7);
+		}
+		
+		static void OnTimer1Update()
+		{
 		}
 	};
 }
