@@ -7,15 +7,21 @@
 #ifndef DRIVECONTROLLERSWITCH_H
 #define DRIVECONTROLLERSWITCH_H
 
-template <class Port, unsigned char Pin1, unsigned char Pin2>
+template <class Connection>
 class DriveControllerSwitch
 {
+public:
+	typedef typename Connection::Port Port;
+	static const unsigned char Pin1 = Connection::Pin1;
+	static const unsigned char Pin2 = Connection::Pin2;
 public:
 	static void Init()
 	{
 		// Ноги споддтяжкой
-		Port::SetInputWithPullUpDownPin(Pin1);
-		Port::SetInputWithPullUpDownPin(Pin2);
+		Port::SetMode(Pin1, Port::ModeInput);
+		Port::SetConfig(Pin1, Port::ConfigInputPull);
+		Port::SetMode(Pin2, Port::ModeInput);
+		Port::SetConfig(Pin2, Port::ConfigInputPull);
 		// к питанию
 		Port::SetBit(Pin1);
 		Port::SetBit(Pin2);

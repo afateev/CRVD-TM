@@ -33,6 +33,66 @@ static void OnTenKiloHertzTimerTick()
 
 static void OnKiloHertzTimerTick()
 {
+	static unsigned int portScannerCnt = 0;
+	static unsigned int oscGetterCnt = 0;
+	static unsigned int insulationControlCnt = 0;
+	
+	if (portScannerCnt >= 10)
+	{
+		ModBusState::Run();
+		
+		if (ControllerSwitch::IsPrimaryActive() || true)
+		{
+			portScanner::SkipPrimary = false;
+			if (!portScanner::SkipReserve)
+			{
+				portScanner::SkipReserve = portScanner::RunCountReserve > 7;
+			}
+			else
+			{
+				portScanner::RunCountReserve = 0;
+			}
+		}
+		
+		if (ControllerSwitch::IsReserveActive())
+		{
+			portScanner::SkipPrimary = true;
+			portScanner::SkipReserve = false;
+			
+			if (!portScanner::SkipPrimary)
+			{
+				portScanner::SkipPrimary = portScanner::RunCountPrimary > 7;
+			}
+			else
+			{
+				portScanner::RunCountPrimary = 0;
+			}
+		}
+		
+		if (insulationControlCnt >= 1000)
+		{
+			portScanner::SkipInsulationControl = false; 
+			insulationControlCnt = 0;
+		}
+		
+		insulationControlCnt++;
+		
+		if (!portScanner::SkipInsulationControl)
+		{
+			portScanner::SkipInsulationControl = portScanner::RunCountInsulationControl > 0;
+		}
+		else
+		{
+			portScanner::RunCountInsulationControl = 0;
+		}
+		
+		portScanner::Run();
+		
+		portScannerCnt = 0;
+	}
+	
+	portScannerCnt++;
+	
 	display.Tick();
 	keyboardScanner::Tick();
 	ActiveDriveControllerParams::Tick();
@@ -63,6 +123,9 @@ int main()
 	DesctopInit();
 	ControllerParamsMenuEndEditorsInit();
 	
+	ActiveDriveControllerParams::SetActiveController(&PrimaryControllerInterface);
+	ControllerSwitch::Init();
+	
 	keyboardScanner::Init();
 	keyboardScanner::SetOnKeyDown(OnKeyDownCallback);
 	
@@ -74,6 +137,26 @@ int main()
 	
 	while(1)
 	{
+		if (ControllerSwitch::IsPrimaryActive())
+		{
+			ActiveDriveControllerParams::SetActiveController(&PrimaryControllerInterface);
+		}
+		else
+		{
+			PrimaryControllerInterface.SetDoOnlyLowerRegsRequest(false);
+		}
+		
+		if (ControllerSwitch::IsReserveActive())
+		{
+			ActiveDriveControllerParams::SetActiveController(&ReserveControllerInterface);
+		}
+		else
+		{
+			ReserveControllerInterface.SetDoOnlyLowerRegsRequest(false);
+		}
+		
+		DriveEvets::Run();
+		
 		if (lastKey)
 		{
 			if (mainMenu.Visible())

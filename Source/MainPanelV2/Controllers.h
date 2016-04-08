@@ -6,6 +6,8 @@
 #include "DriveControllerParams.h"
 #include "InsulationControl.h"
 #include "DriveControllerSwitch.h"
+#include "PortScanner.h"
+#include "DriveEventsGenerator.h"
 #include "../MainPanel/MegaLib/Modbus/ModbusStateMachine.h"
 
 class MainComPort
@@ -21,5 +23,22 @@ DriveControllerInterface<PrimaryController, true>	PrimaryControllerInterface;
 DriveControllerInterface<ReserveController, false>	ReserveControllerInterface;
 
 typedef DriveControllerParams<DriveControllerInterfaceBase, Config> ActiveDriveControllerParams;
+
+typedef DriveControllerSwitch<Drivers::Board::ControllerSwitchConnection> ControllerSwitch;
+
+//Класс заглушка
+class Empty
+{
+public:
+	static bool Run()
+	{
+		return true;
+	}
+};
+
+
+typedef PortScanner<Drivers::Board::PortScanerConnection, PrimaryController, ReserveController, Empty, InsulationController> portScanner;
+
+typedef DriveEventsGenerator<ActiveDriveControllerParams, Events> DriveEvets;
 
 #endif

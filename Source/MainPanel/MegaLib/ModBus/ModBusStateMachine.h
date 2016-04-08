@@ -73,8 +73,8 @@ public:
 	static void Init()
 	{
 		_state = StateReady;
-		Uart::SetOnTxEndCallback(OnWriteEnd);
-		Uart::SetOnNewCharCallback(OnRead);
+		Uart::OnWriteComplete = OnWriteEnd;
+		Uart::OnRead = OnRead;
 		_packetDetector.SetMaxCount(350);
 		_packetDetector.SetCallback(OnTimeOut);
 	}
@@ -86,7 +86,7 @@ public:
 
 	static void ChangeSpeed(unsigned long CoreFrequency, unsigned int baudrate)
     {
-        Uart::Init(CoreFrequency, baudrate);
+        Uart::Init(CoreFrequency, baudrate, Uart::StopBits1, Uart::ParityNone);
         if (baudrate == 115200)
             //_packetDetector.SetMaxCount(35); // TODO ѕ–ќ¬≈–»“№ “ј…ћј”“џ
 			_packetDetector.SetMaxCount(70);
@@ -135,11 +135,6 @@ public:
 			break;
 		case StateWrite:
 			{
-				// вычитать всЄ из буферов перед отправкой
-				unsigned char tmp[256];
-				unsigned int readed = Uart::Read(tmp, 256);
-				
-				
 				// отправл€ем
 				Uart::Write(_buffer, RequestSize);
 				RequestSize = 0;
@@ -161,7 +156,7 @@ public:
 			break;
 		case StateRead:
 			{
-				ResponseSize = Uart::Read(_buffer, 256);
+				// данные в количестве ResponseSize лежат в _buffer
 				_state = StateReady;
 			}
 			break;
@@ -177,9 +172,18 @@ public:
 			_state = StateWaitRead;
 		}
 	}
-	static void OnRead()
+	static void OnRead(unsigned int nextByte)
 	{
 		_packetDetector.ResetCounter();
+		
+		if (StateWaitRead == _state)
+		{
+			if (ResponseSize < BufferSize)
+			{
+				_buffer[ResponseSize] = nextByte;
+				ResponseSize++;
+			}
+		}
 	}
 	
 	static void OnTimeOut()

@@ -92,7 +92,7 @@ public:
 			{
 				if (ModBus::IsReady())
 				{
-                    ModBus::ChangeSpeed(Config::CoreFrequency, 115200);
+                    ModBus::ChangeSpeed(Config::MainComPortClockSourceFrequensy, 115200);
 										
 					if (_oscRequestWait && _regRequestCount > 0)
 					{

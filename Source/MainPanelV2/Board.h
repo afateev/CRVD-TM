@@ -17,6 +17,7 @@ namespace MainPanel
 		typedef Rblib::InterruptMap InterruptMap;
 		typedef Rblib::Usart Usart;
 		typedef Rblib::FlashMemoryController FlashMemoryController;
+		typedef Rblib::Afio Afio;
 		
 		class Clock
 		{
@@ -100,6 +101,22 @@ namespace MainPanel
 					Port::SetConfig(i, Port::ConfigOutputPushPull);
 				}
 			}
+		};
+		
+		class ControllerSwitchConnection
+		{
+		public:
+			typedef Gpio::A Port;
+			static const int Pin1 = 4;
+			static const int Pin2 = 5;
+		};
+		
+		class PortScanerConnection
+		{
+		public:
+			typedef Gpio::D Port;
+			static const int Pin0 = 10;
+			static const int Pin1 = 11;
 		};
 		
 		typedef Timer::Timer1 TenKiloHertzTimer;

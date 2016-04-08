@@ -11,6 +11,7 @@ class Config
 {
 public:
 	static const unsigned long CoreFrequency = 25000000;		// Частота ядра ("быстрый" внешний кварц)
+	static const unsigned long MainComPortClockSourceFrequensy = 36000000;	// Частота источника тактирования основного последовательного порта
 	
 	static float GetAdcMax()
 	{
