@@ -1,0 +1,25 @@
+///////////////////////////////////////////////////////////////////////////////
+//	Строитель пакетов
+//	Протокол FirTwig3
+//
+///////////////////////////////////////////////////////////////////////////////
+
+#ifndef PACKETBUILDER_FIRTWIG3_H
+#define PACKETBUILDER_FIRTWIG3_H
+
+namespace Rblib
+{
+namespace Protocol
+{
+namespace FirTwig3
+{
+class PacketBuilder
+{
+public:
+};
+
+}
+}
+}
+
+#endif

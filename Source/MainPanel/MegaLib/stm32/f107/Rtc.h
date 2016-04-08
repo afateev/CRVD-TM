@@ -8,6 +8,7 @@
 #define RTC_STM32_F107_H
 
 #include "RtcParts.h"
+#include "PowerControl.h"
 
 const unsigned int RtcBase = 0x40002800;
 
