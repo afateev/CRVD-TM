@@ -1,0 +1,20 @@
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+//	Fateev A.I.		04/12/2011
+////////////////////////////////////////////////////////////////////////////////
+
+#ifndef AFIO_STM32_F107_H
+#define AFIO_STM32_F107_H
+
+#include "AfioParts.h"
+
+const unsigned int AfioBase = 0x40010000;
+
+class Afio :
+	public AfioRemapRegister<AfioBase + 0x04>
+{
+
+};
+
+#endif
