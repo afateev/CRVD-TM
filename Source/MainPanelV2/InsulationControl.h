@@ -99,6 +99,11 @@ public:
 		return _registers[reg];
 	}
 	
+	static void GetRegValue(int reg, unsigned short &value)
+	{
+		value = GetRegValue(reg);
+	}
+	
 	static bool GetRegValues(unsigned char *buffer, unsigned int bufferLen, unsigned short firstAddr, unsigned short quantity)
 	{
 		unsigned short minReg = 0;
@@ -138,6 +143,11 @@ public:
 	static unsigned char GetAddress()
 	{
 		return _address;
+	}
+	
+	static void GetAddress(unsigned char &value)
+	{
+		value = GetAddress();
 	}
 };
 
