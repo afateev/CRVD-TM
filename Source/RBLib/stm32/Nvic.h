@@ -85,7 +85,7 @@ namespace NvicImplementation
 		
 		static void SetInterruptPriority(unsigned int irqIndex, unsigned char priority)
 		{
-			Register::Ptr()[irqIndex] = priority;
+			Register::Ptr()[irqIndex] = priority << 4;
 		}
 	};
 	
