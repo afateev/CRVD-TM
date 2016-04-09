@@ -37,7 +37,7 @@ namespace AfioImplementation
 			Core::RegisterValueType CAN1_REMAP				: 2;
 			Core::RegisterValueType PD01_REMAP				: 1;
 			Core::RegisterValueType TIM5CH4_IREMAP			: 1;
-			Core::RegisterValueType 						: 5;
+			Core::RegisterValueType 						: 4;
 			Core::RegisterValueType ETH_REMAP				: 1;
 			Core::RegisterValueType CAN2_REMAP				: 1;
 			Core::RegisterValueType MII_RMII_SEL			: 1;
@@ -68,12 +68,12 @@ namespace AfioImplementation
 		
 		static void RemapUsart2(unsigned char selector)
 		{
-			Register::Ptr()->USART1_REMAP = selector;
+			Register::Ptr()->USART2_REMAP = selector;
 		}
 		
 		static void RemapUsart3(unsigned char selector)
 		{
-			Register::Ptr()->USART1_REMAP = selector;
+			Register::Ptr()->USART3_REMAP = selector;
 		}
 		
 		static void RemapSpi3(unsigned char selector)
