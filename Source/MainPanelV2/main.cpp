@@ -7,8 +7,12 @@
 #include "GUI/GUI.h"
 #include "Controllers.h"
 #include "KeyboardScanner.h"
+#include "SideIndicators.h"
+#include "Files.h"
 
 typedef KeyboardScanner<Drivers::Board::Gpio::D, 4, 3, 2, 1, 15, 14, 13, 12> keyboardScanner;
+
+SideIndicators<Drivers::StatorDisplay, Drivers::RotorDisplay, ActiveDriveControllerParams> StatorRotorIndicators;
 
 void GetMainWindowDisplayData(MainWindowDisplayData &displayData)
 {
@@ -33,13 +37,16 @@ static void OnTenKiloHertzTimerTick()
 
 static void OnKiloHertzTimerTick()
 {
+	
 	static unsigned int portScannerCnt = 0;
 	static unsigned int oscGetterCnt = 0;
 	static unsigned int insulationControlCnt = 0;
 	
 	if (portScannerCnt >= 10)
 	{
+		
 		ModBusState::Run();
+		
 		
 		if (ControllerSwitch::IsPrimaryActive() || true)
 		{
@@ -96,6 +103,7 @@ static void OnKiloHertzTimerTick()
 	display.Tick();
 	keyboardScanner::Tick();
 	ActiveDriveControllerParams::Tick();
+	
 }
 
 char lastKey = 0;
@@ -105,12 +113,63 @@ void OnKeyDownCallback(char key)
 	lastKey = key;
 }
 
+
+void GuiTimerTick()
+{
+	Drivers::Board::Gpio::A::SetBit(8);
+	
+	if (lastKey)
+	{
+		if (mainMenu.Visible())
+		{
+			mainMenu.OnKeyDown(lastKey);
+			if ('E' == lastKey)
+			{
+				if (!mainMenu.Visible())
+					desctop.ShowWindow(wndIdMain);
+			}
+		}
+		else
+		{
+			if (!desctop.OnKeyDown(lastKey))
+			{
+				if (desctop.IsWindowVisible(wndIdMain))
+				{
+					if (13 == lastKey)
+						mainMenu.Show();
+				}
+				else
+				{
+					mainMenu.OnKeyDown(lastKey);
+				}
+			}
+		}
+		lastKey = 0;
+	}
+	
+	if (mainMenu.Visible())
+	{
+		mainMenu.Draw();
+	}
+	else
+	{
+		//DrawDebugRegistersScreen();
+		//DrawMainScreen();
+		desctop.Draw();
+	}
+	
+	Drivers::Board::Gpio::A::ClearBit(8);
+}
+
+unsigned long FatStateWaitGuardTimeout = 0;
+
 int main()
 {
 	Drivers::Init();
 	
 	Drivers::Board::TenKiloHertzTimer::UpdateInterruptHandler = OnTenKiloHertzTimerTick;
 	Drivers::Board::KiloHertzTimer::UpdateInterruptHandler = OnKiloHertzTimerTick;
+	Drivers::Board::GuiTimer::UpdateInterruptHandler = GuiTimerTick;
 	
 	display.SelectContext(&Drivers::DrawContext);
 			
@@ -129,7 +188,17 @@ int main()
 	keyboardScanner::Init();
 	keyboardScanner::SetOnKeyDown(OnKeyDownCallback);
 	
+	StatorRotorIndicators.Init();
+	
 	ModBusState::Init();
+	
+	Flash.Init();
+	fl_init();
+	
+	Events::Init(EventsRead, EventsWrite, EventsSeek);
+	ActiveDriveControllerParams::Init(ControllerFilesRead, ControllerFilesWrite);
+	
+	OscGet::Init(OscFilesRead, OscFilesWrite);
 	
 	// начали работу
 	Event e(Rtc::GetTime(), EventProgramStart);
@@ -156,45 +225,81 @@ int main()
 		}
 		
 		DriveEvets::Run();
-		
-		if (lastKey)
+		ActiveDriveControllerParams::Run();
+		/*
+		if (ModBus485Slave::MyAddress != ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamSlaveAddr>())
 		{
-			if (mainMenu.Visible())
+			ModBus485Slave::MyAddress = ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamSlaveAddr>();
+		}
+		
+		if (ModBusSlaveState::CurrentBoudrate != ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamBoudrate>())
+		{
+			ModBusSlaveState::ChangeSpeed(Config::CoreFrequency, ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamBoudrate>());
+		}
+		
+		if ((ModBusSlaveState::CurrentParityEnabled != ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamParity>()) ||
+			(ModBusSlaveState::CurrentParityEven != ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamParityType>()))
+		{
+			ModBusSlaveState::ChangeParity(ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamParity>(),
+										   ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamParityType>());
+		}*/
+		
+		StatorRotorIndicators.Update();
+		
+		Flash.Run();
+		switch(fatState)
+		{
+		case FatStateInit:
 			{
-				mainMenu.OnKeyDown(lastKey);
-				if ('E' == lastKey)
+				if (Flash.Ready())
 				{
-					if (!mainMenu.Visible())
-						desctop.ShowWindow(wndIdMain);
-				}
-			}
-			else
-			{
-				if (!desctop.OnKeyDown(lastKey))
-				{
-					if (desctop.IsWindowVisible(wndIdMain))
+					if (fl_attach_media(&media_read, media_write) != FAT_INIT_OK)
 					{
-						if (13 == lastKey)
-							mainMenu.Show();
+						/// Если поломалось можно отформатировать
+						/*
+						fatfs_init(&fs_formatting);
+						fs_formatting.disk_io.read_media = media_read;
+						fs_formatting.disk_io.write_media = media_write;
+						fatfs_format_fat16(&fs_formatting, 0x10000, "123");
+						fatState = FatStateError;
+						*/
 					}
 					else
 					{
-						mainMenu.OnKeyDown(lastKey);
+						//fl_listdirectory("/");
+                        //FatStateWaitGuardTimeout = 10;
+                        //fatState = FatStateWaitGuard;
+                        fatState = FatStateReady;
 					}
 				}
 			}
-			lastKey = 0;
-		}
-		
-		if (mainMenu.Visible())
-		{
-			mainMenu.Draw();
-		}
-		else
-		{
-			//DrawDebugRegistersScreen();
-			//DrawMainScreen();
-			desctop.Draw();
+			break;
+        // не помогает
+        case FatStateWaitGuard:
+            {
+                if (FatStateWaitGuardTimeout > 0)
+                {
+                    FatStateWaitGuardTimeout--;
+                }
+                else
+                {
+                    fatState = FatStateReady;
+                }
+                if (!Flash.Ready())
+				{
+					fatState = FatStateInit;
+				}
+            }
+            break;
+		case FatStateError:
+		case FatStateReady:
+			{
+				if (!Flash.Ready())
+				{
+					fatState = FatStateInit;
+				}
+			}
+			break;
 		}
 	}
 }

@@ -111,7 +111,7 @@ void MenuInit()
 	menuListRoot.Add(&menuSystemSetup);
 	menuListRoot.Add(&menuControllerSetup);
 	menuListRoot.Add(&menuIndicationSetup);
-	//menuListRoot.Add(&menuDebugRegisters);
+	menuListRoot.Add(&menuDebugRegisters);
 	menuListRoot.Add(&menuMainScreen);
 	//menuListRoot.Add(&menuHideAll);
 	
@@ -135,12 +135,12 @@ void DesctopInit()
 	wndMain.GetDisplayDataCallback = GetMainWindowDisplayData;
 	wndGraph.SetOnClose(OnWindowGraphClose);
 	wndDebugRegisters.SetOnClose(OnWindowClose);
-	// TODO wndDebugRegisters.PrimaryControllerGetAddressCallback = PrimaryController::GetAddress();
-	// TODO wndDebugRegisters.PrimaryControllerGetRegValueCallback = PrimaryController::GetRegValue(i);
-	// TODO wndDebugRegisters.ReserveControllerGetAddressCallback = ReserveController::GetAddress();
-	// TODO wndDebugRegisters.ReserveControllerGetRegValueCallback = ReserveController::GetRegValue(i);
-	// TODO wndDebugRegisters.InsulationControllerGetAddressCallback = InsulationController::GetAddress();
-	// TODO wndDebugRegisters.InsulationControllerGetRegValueCallback = InsulationController::GetRegValue(i);
+	wndDebugRegisters.PrimaryControllerGetAddressCallback = PrimaryController::GetAddress;
+	wndDebugRegisters.PrimaryControllerGetRegValueCallback = PrimaryController::GetRegValue;
+	wndDebugRegisters.ReserveControllerGetAddressCallback = ReserveController::GetAddress;
+	wndDebugRegisters.ReserveControllerGetRegValueCallback = ReserveController::GetRegValue;
+	wndDebugRegisters.InsulationControllerGetAddressCallback = InsulationController::GetAddress;
+	wndDebugRegisters.InsulationControllerGetRegValueCallback = InsulationController::GetRegValue;
 	wndEvents.SetOnClose(OnWindowClose);
 	wndConfigSystemDateTime.SetOnClose(OnWindowClose);
 	wndResetOperatingTime.SetOnClose(OnWindowClose);

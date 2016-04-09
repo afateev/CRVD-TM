@@ -21,7 +21,7 @@ protected:
 	static CallbackType *_onKeyDown;
 	static CallbackType *_onKeyUp;
 	static unsigned int _repeateCount;
-	static const unsigned int RepeatTimeout = 500;
+	static const unsigned int RepeatTimeout = 50;
 public:
 	
 	static inline void Init()

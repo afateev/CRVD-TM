@@ -55,6 +55,9 @@ namespace MainPanel
 				// Ядро от PLL
 				Rcc::SetSystemClock(Rcc::SystemClockPLL);
 				
+				// Вывод тактирования для проверки
+				Rcc::SetClockOutput(Rcc::ClockOutputPllDiv2);
+				
 				Rcc::EnableClockAfio();
 				Rcc::EnableClockPortA();
 				Rcc::EnableClockPortC();
@@ -62,10 +65,18 @@ namespace MainPanel
 				Rcc::EnableClockPortE();
 				Rcc::EnableClockTimer1();
 				Rcc::EnableClockTimer2();
+				Rcc::EnableClockTimer3();
 				Rcc::EnableClockPowerInterface();
 				Rcc::EnableClockUsart2();
 				Rcc::EnableClockUsart3();
 				Rcc::EnableClockSpi3();
+				
+				//Вывод тактирования
+				Gpio::A::SetMode(8, Gpio::A::ModeOutput);
+				//Gpio::A::SetConfig(8, Gpio::A::ConfigOutputAlternatePushPull);
+				Gpio::A::SetConfig(8, Gpio::A::ConfigOutputPushPull);
+				//Gpio::A::SetBit(8);
+				Gpio::A::ClearBit(8);
 			}
 		};
 		
@@ -125,7 +136,10 @@ namespace MainPanel
 		typedef Timer::Timer2 KiloHertzTimer;
 		static const unsigned int KiloHertzTickFrequency = 1000;
 		
-		typedef Usart::Usart2 MainComPort;
+		typedef Timer::Timer3 GuiTimer;
+		static const unsigned int GuiTickFrequency = 5;
+		
+		typedef Usart::Usart3 MainComPort;
 		
 		typedef Rs485InterfaceImpl<Usart::Usart2, Gpio::D, 7> Rs485Interface;
 	public:
@@ -142,11 +156,20 @@ namespace MainPanel
 			Nvic::InterruptEnable(Nvic::InterruptVector_TIM1_UP);
 			
 			KiloHertzTimer::SetPrescaler(72);
-			KiloHertzTimer::SetMaxCount(1000000 / TenKiloHertzTickFrequency);
+			KiloHertzTimer::SetMaxCount(1000000 / KiloHertzTickFrequency);
 			KiloHertzTimer::Start();
 			KiloHertzTimer::ClearUpdateInterruptFlag();
 			KiloHertzTimer::EnableUpdateInterrupt();
 			Nvic::InterruptEnable(Nvic::InterruptVector_TIM2);
+			Nvic::SetInterruptPriority(Nvic::InterruptVector_TIM2, 2);
+			
+			GuiTimer::SetPrescaler(720);
+			GuiTimer::SetMaxCount(100000 / GuiTickFrequency);
+			GuiTimer::Start();
+			GuiTimer::ClearUpdateInterruptFlag();
+			GuiTimer::EnableUpdateInterrupt();
+			Nvic::InterruptEnable(Nvic::InterruptVector_TIM3);
+			Nvic::SetInterruptPriority(Nvic::InterruptVector_TIM3, 3);
 			
 			Gpio::D::SetMode(8, Gpio::D::ModeOutput);
 			Gpio::D::SetConfig(8, Gpio::D::ConfigOutputAlternatePushPull);
@@ -156,12 +179,22 @@ namespace MainPanel
 			//MainComPort::OnRead = OnUsartRead;
 			//MainComPort::OnWriteComplete = OnWriteComplete;
 			MainComPort::Enable();
+			Nvic::InterruptEnable(Nvic::InterruptVector_USART3);
 			
 			// 485
 			// RE/DE
 			Gpio::D::SetMode(7, Gpio::D::ModeOutput);
 			Gpio::D::SetConfig(7, Gpio::D::ConfigOutputPushPull);
 			Gpio::D::ClearBit(7);
+			
+			// SPI3
+			// CLK as alternate output
+			Gpio::C::SetMode(10, Gpio::C::ModeOutput);
+			Gpio::C::SetConfig(10, Gpio::C::ConfigOutputAlternatePushPull);
+			// MOSI as alternate output
+			Gpio::C::SetMode(12, Gpio::C::ModeOutput);
+			Gpio::C::SetConfig(12, Gpio::C::ConfigOutputAlternatePushPull);
+			Afio::RemapSpi3(1);
 		}
 		
 		static void OnTimer1Update()
