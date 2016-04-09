@@ -108,6 +108,12 @@ namespace GpioImplementation
 				*ptr = regVal;
 			}
 		}
+		
+		static void SetOutputPin(unsigned char pin)
+		{
+			SetMode(pin, ModeOutput);
+			SetConfig(pin, ConfigOutputPushPull);
+		}
 	};
 	
 	// Port input data register (GPIOx_IDR) (x=A..G)
