@@ -30,10 +30,16 @@ namespace Sd
 		CardBase()
 		: _sdhc(false)
 		, _rca(0)
-		, _name("")
-		, _appId("")
 		, _serial(0)
 		{
+			for (int i = 0; i < sizeof(_name); i++)
+			{
+				_name[i] = 0;
+			}
+			for (int i = 0; i < sizeof(_appId); i++)
+			{
+				_appId[i] = 0;
+			}
 		}
 
     public:
