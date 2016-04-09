@@ -139,9 +139,6 @@ public:
 				Uart::Write(_buffer, RequestSize);
 				RequestSize = 0;
 				_state = StateWaitWriteEnd;
-				// забудем что было
-				for (int i = 0; i < BufferSize; i++)
-					_buffer[i] = 0;
 			}
 			break;
 		case StateWaitWriteEnd:
@@ -166,6 +163,12 @@ public:
 	{
 		if (StateWaitWriteEnd == _state)
 		{
+			// забудем что было
+			for (int i = 0; i < BufferSize; i++)
+			{
+				_buffer[i] = 0;
+			}
+
 			_packetDetector.ResetCounter();
 			//Gpio::_D::SetOutputPin(2);
 			//Gpio::_D::SetBit(2);
