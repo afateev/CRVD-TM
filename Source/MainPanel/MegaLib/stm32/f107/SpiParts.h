@@ -12,6 +12,18 @@
 template<RegisterPointerType RegisterAddr>
 class SpiControl1Register
 {
+public:
+	enum Divider
+	{
+		Div2	= 0,
+		Div4	= 1,
+		Div8	= 2,
+		Div16	= 3,
+		Div32	= 4,
+		Div64	= 5,
+		Div128	= 6,
+		Div256	= 7,
+	};
 protected:
 	
 	template<class RegisterDataType>
@@ -42,6 +54,11 @@ public:
 		RegRef::_register->InternalSlaveSelect = enable;
 		RegRef::_register->ClockPolarity = polarity;
 		RegRef::_register->SpiEnable = enable;
+	}
+	
+	static void SetDivider(Divider val)
+	{
+		RegRef::_register->BaudRate = val;
 	}
 };
 
