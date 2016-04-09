@@ -334,6 +334,11 @@ public:
 		
 		return _registers[reg];
 	}
+	
+	static void GetRegValue(int reg, unsigned short &value)
+	{
+		value = GetRegValue(reg);
+	}
     
     static void SetRegValue(unsigned short reg, unsigned short value)
     {
@@ -360,6 +365,11 @@ public:
 	static unsigned char GetAddress()
 	{
 		return _address;
+	}
+	
+	static void GetAddress(unsigned char &value)
+	{
+		value = GetAddress();
 	}
 	
 	static inline unsigned short MinRegNumber()
