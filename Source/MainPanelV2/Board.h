@@ -4,6 +4,7 @@
 
 #include "../RbLib/Rblib.h"
 #include "Rs485InterfaceImpl.h"
+#include "Config.h"
 
 namespace MainPanel
 {
@@ -66,6 +67,7 @@ namespace MainPanel
 				Rcc::EnableClockTimer1();
 				Rcc::EnableClockTimer2();
 				Rcc::EnableClockTimer3();
+				Rcc::EnableClockTimer4();
 				Rcc::EnableClockPowerInterface();
 				Rcc::EnableClockUsart2();
 				Rcc::EnableClockUsart3();
@@ -139,6 +141,9 @@ namespace MainPanel
 		typedef Timer::Timer3 GuiTimer;
 		static const unsigned int GuiTickFrequency = 5;
 		
+		typedef Timer::Timer4 ModbusSlaveTimer;
+		static const unsigned int ModbusSlaveFrequency = 100;
+		
 		typedef Usart::Usart3 MainComPort;
 		
 		typedef Rs485InterfaceImpl<Usart::Usart2, Gpio::D, 7> Rs485Interface;
@@ -169,7 +174,15 @@ namespace MainPanel
 			GuiTimer::ClearUpdateInterruptFlag();
 			GuiTimer::EnableUpdateInterrupt();
 			Nvic::InterruptEnable(Nvic::InterruptVector_TIM3);
-			Nvic::SetInterruptPriority(Nvic::InterruptVector_TIM3, 3);
+			Nvic::SetInterruptPriority(Nvic::InterruptVector_TIM3, 4);
+			
+			ModbusSlaveTimer::SetPrescaler(720);
+			ModbusSlaveTimer::SetMaxCount(100000 / ModbusSlaveFrequency);
+			ModbusSlaveTimer::Start();
+			ModbusSlaveTimer::ClearUpdateInterruptFlag();
+			ModbusSlaveTimer::EnableUpdateInterrupt();
+			Nvic::InterruptEnable(Nvic::InterruptVector_TIM4);
+			Nvic::SetInterruptPriority(Nvic::InterruptVector_TIM4, 3);
 			
 			Gpio::D::SetMode(8, Gpio::D::ModeOutput);
 			Gpio::D::SetConfig(8, Gpio::D::ConfigOutputAlternatePushPull);
@@ -186,6 +199,12 @@ namespace MainPanel
 			Gpio::D::SetMode(7, Gpio::D::ModeOutput);
 			Gpio::D::SetConfig(7, Gpio::D::ConfigOutputPushPull);
 			Gpio::D::ClearBit(7);
+			// TX
+			Gpio::D::SetMode(5, Gpio::D::ModeOutput);
+			Gpio::D::SetConfig(5, Gpio::D::ConfigOutputAlternatePushPull);
+			Afio::RemapUsart2(1);
+			Nvic::InterruptEnable(Nvic::InterruptVector_USART2);
+			Rs485Init(9600, false, false);
 			
 			// SPI3
 			// CLK as alternate output
@@ -195,6 +214,11 @@ namespace MainPanel
 			Gpio::C::SetMode(12, Gpio::C::ModeOutput);
 			Gpio::C::SetConfig(12, Gpio::C::ConfigOutputAlternatePushPull);
 			Afio::RemapSpi3(1);
+		}
+		
+		static void Rs485Init(int boudrate, bool parityEnable, bool parityEven)
+		{
+			Rs485Interface::Init(Config::Por485tClockSourceFrequency, boudrate, parityEnable, parityEven);
 		}
 		
 		static void OnTimer1Update()

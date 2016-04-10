@@ -41,7 +41,7 @@ namespace MainPanel
 		typedef MMC<SpiWrapper<Spi::_C, typename Board::Gpio::D, 0, false, false> > FlashType;
 		
 		typedef Rblib::Driver::Rs485<typename Board::Rs485Interface> Rs485Type;
-		Rs485Type Rs485;
+		static Rs485Type Rs485;
 	public:
 		static void Init()
 		{
@@ -63,6 +63,9 @@ namespace MainPanel
 	
 	template <class Board>
 		Drivers<Board>::FontType Drivers<Board>::MenuBigFont(Rblib::GOSTtypeB16x32);
+	
+	template <class Board>
+		Drivers<Board>::Rs485Type Drivers<Board>::Rs485;
 }
 
 typedef MainPanel::Drivers<MainPanel::Board> Drivers;

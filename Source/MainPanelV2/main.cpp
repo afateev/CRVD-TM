@@ -33,6 +33,7 @@ void GetMainWindowDisplayData(MainWindowDisplayData &displayData)
 static void OnTenKiloHertzTimerTick()
 {
 	ModBusState::PacketTimeoutDetectorTick();
+	Drivers::Rs485.Tick(Drivers::Board::TenKiloHertzTickFrequency);
 }
 
 static void OnKiloHertzTimerTick()
@@ -42,12 +43,12 @@ static void OnKiloHertzTimerTick()
 	static unsigned int oscGetterCnt = 0;
 	static unsigned int insulationControlCnt = 0;
 	
-	if (portScannerCnt >= 10)
+	if (portScannerCnt >= 0)
 	{
 		
 		ModBusState::Run();
 		
-		
+		/*
 		if (ControllerSwitch::IsPrimaryActive() || true)
 		{
 			portScanner::SkipPrimary = false;
@@ -74,9 +75,9 @@ static void OnKiloHertzTimerTick()
 			{
 				portScanner::RunCountPrimary = 0;
 			}
-		}
+		}*/
 		
-		if (insulationControlCnt >= 1000)
+		if (insulationControlCnt >= Drivers::Board::KiloHertzTickFrequency)
 		{
 			portScanner::SkipInsulationControl = false; 
 			insulationControlCnt = 0;
@@ -161,6 +162,82 @@ void GuiTimerTick()
 	Drivers::Board::Gpio::A::ClearBit(8);
 }
 
+Rblib::Driver::ModbusSlave ModbusSlave;
+
+unsigned char inputBufferRs485[256];
+int _rxRs485Count = 0;
+unsigned char outputBufferRs485[256];
+int rs485Boudrate = 9600;
+bool rs485ParityEnable = false;
+bool rx485ParityEven = false;
+
+void OnRs485DataReceived(unsigned char *data, int count)
+{
+	if (_rxRs485Count > 0)
+	{
+		return;
+	}
+	
+	for (int i = 0; i < count; i++)
+	{
+		inputBufferRs485[i] = data[i];
+	}
+	
+	_rxRs485Count = count;
+}
+
+void ModbusSlaveTimerTick()
+{
+	if (_rxRs485Count)
+	{
+		int writeCount = ModbusSlave.ProcessFrame(inputBufferRs485, _rxRs485Count, outputBufferRs485);
+		if (writeCount > 0)
+		{
+			Drivers::Rs485.Write(outputBufferRs485, writeCount);
+		}
+		_rxRs485Count = 0;
+	}
+	
+	bool paramsChanged = false;
+	paramsChanged |= rs485Boudrate != ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamBoudrate>();
+	paramsChanged |= rs485ParityEnable != ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamParity>();
+	paramsChanged |= rx485ParityEven != ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamParityType>();
+	
+	if (paramsChanged)
+	{
+		rs485Boudrate = ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamBoudrate>();
+		rs485ParityEnable = ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamParity>();
+		rx485ParityEven = ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamParityType>();
+		
+		Drivers::Board::Rs485Init(rs485Boudrate, rs485ParityEnable, rx485ParityEven);
+	}
+}
+
+void GetModbusAddress(unsigned char &address)
+{
+	address = ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamSlaveAddr>();
+}
+
+void GetRegisterValue(unsigned short reg, unsigned short &val)
+{
+	if (reg >= 200 && reg < 201 )
+	{
+		// контроль изоляции
+		// 10 - й мапится на 200-й
+		val = InsulationController::GetRegValue(reg);
+	}
+	else
+	{
+		// активный регулятор
+		val = ActiveDriveControllerParams::GetRegValue(reg);
+	}
+}
+
+void SetRegisterValue(unsigned short reg, unsigned short val, bool &result)
+{
+	result = false;
+}
+
 unsigned long FatStateWaitGuardTimeout = 0;
 
 int main()
@@ -170,6 +247,7 @@ int main()
 	Drivers::Board::TenKiloHertzTimer::UpdateInterruptHandler = OnTenKiloHertzTimerTick;
 	Drivers::Board::KiloHertzTimer::UpdateInterruptHandler = OnKiloHertzTimerTick;
 	Drivers::Board::GuiTimer::UpdateInterruptHandler = GuiTimerTick;
+	Drivers::Board::ModbusSlaveTimer::UpdateInterruptHandler = ModbusSlaveTimerTick;
 	
 	display.SelectContext(&Drivers::DrawContext);
 			
@@ -191,6 +269,14 @@ int main()
 	StatorRotorIndicators.Init();
 	
 	ModBusState::Init();
+	
+	Drivers::Rs485.Init(0.0025);
+	Drivers::Rs485.OnReadComplete = OnRs485DataReceived;
+	
+	ModbusSlave.GetSelfAddress = GetModbusAddress;
+	ModbusSlave.GetRegisterValue = GetRegisterValue;
+	ModbusSlave.SetRegisterValue = SetRegisterValue;
+	ModbusSlave.Init();
 	
 	Flash.Init();
 	fl_init();
@@ -226,23 +312,6 @@ int main()
 		
 		DriveEvets::Run();
 		ActiveDriveControllerParams::Run();
-		/*
-		if (ModBus485Slave::MyAddress != ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamSlaveAddr>())
-		{
-			ModBus485Slave::MyAddress = ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamSlaveAddr>();
-		}
-		
-		if (ModBusSlaveState::CurrentBoudrate != ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamBoudrate>())
-		{
-			ModBusSlaveState::ChangeSpeed(Config::CoreFrequency, ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamBoudrate>());
-		}
-		
-		if ((ModBusSlaveState::CurrentParityEnabled != ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamParity>()) ||
-			(ModBusSlaveState::CurrentParityEven != ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamParityType>()))
-		{
-			ModBusSlaveState::ChangeParity(ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamParity>(),
-										   ActiveDriveControllerParams::GetModbusParamValue_int<ActiveDriveControllerParams::ModbusParamParityType>());
-		}*/
 		
 		StatorRotorIndicators.Update();
 		
@@ -301,5 +370,7 @@ int main()
 			}
 			break;
 		}
+		
+		OscGet::Run();
 	}
 }

@@ -16,9 +16,10 @@ public:
 	static OnReadCallbackType OnReadCallback;
 	static OnWriteCompleteCallbackType OnWriteCompleteCallback;
 public:
-	static void Init(unsigned int clockSourceFrequency, unsigned int boudrate)
+	static void Init(unsigned int clockSourceFrequency, unsigned int boudrate, bool parityEnable = false, bool parityEven = false)
 	{
-		Usart::Init(clockSourceFrequency, boudrate, Usart::StopBits1, Usart::ParityNone);
+		Usart::Disable();
+		Usart::Init(clockSourceFrequency, boudrate, Usart::StopBits1, parityEnable ? (parityEven ? Usart::ParityEven : Usart::ParityOdd) : Usart::ParityNone);
 		Usart::OnRead = OnUsartRead;
 		Usart::OnWriteComplete = OnWriteComplete;
 		Usart::Enable();

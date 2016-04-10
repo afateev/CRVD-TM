@@ -11,7 +11,8 @@ class Config
 {
 public:
 	static const unsigned long CoreFrequency = 25000000;		// „астота €дра ("быстрый" внешний кварц)
-	static const unsigned long MainComPortClockSourceFrequensy = 36000000;	// „астота источника тактировани€ основного последовательного порта
+	static const unsigned long MainComPortClockSourceFrequency = 36000000;	// „астота источника тактировани€ основного последовательного порта
+	static const unsigned long Por485tClockSourceFrequency = 36000000;	// „астота источника тактировани€ основного последовательного порта 485-го интерфейса
 	
 	static float GetAdcMax()
 	{

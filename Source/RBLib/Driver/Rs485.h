@@ -48,7 +48,7 @@ namespace Driver
 			Interface::OnWriteCompleteCallback.Set(OnWriteCompleteCallback, this);
 			Interface::OnReadCallback.Set(OnReadCallback, this);
 			
-			_state = StateRead;
+			SetState(StateRead);
 		}
 		
 		void Tick(unsigned int tickFrequency)
