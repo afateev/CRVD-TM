@@ -240,6 +240,11 @@ void SetRegisterValue(unsigned short reg, unsigned short val, bool &result)
 
 unsigned long FatStateWaitGuardTimeout = 0;
 
+int putchar(int c)
+{
+  return c;
+}
+
 int main()
 {
 	Drivers::Init();
@@ -311,6 +316,8 @@ int main()
 		}
 		
 		DriveEvets::Run();
+		Events::Run();
+		wndEvents.DoLoPiorityWork();
 		ActiveDriveControllerParams::Run();
 		
 		StatorRotorIndicators.Update();
@@ -320,6 +327,8 @@ int main()
 		{
 		case FatStateInit:
 			{
+				eventsFileSize = 0;
+
 				if (Flash.Ready())
 				{
 					if (fl_attach_media(&media_read, media_write) != FAT_INIT_OK)
@@ -339,6 +348,7 @@ int main()
                         //FatStateWaitGuardTimeout = 10;
                         //fatState = FatStateWaitGuard;
                         fatState = FatStateReady;
+						Events::GetEventsCount();
 					}
 				}
 			}

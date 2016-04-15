@@ -25,12 +25,16 @@ protected:
 	unsigned long _scrollBarHeight;
 	long _scrollPos;
 	unsigned long _scrollBarPos;
+	bool _onUpdatePostPending;
+	bool _ignoreOldScrollPos;
 public:
 	WindowEvents()
 	{
 		_scrollPos = 0;
 		_scrollBarPos = 0;
 		_scrollBarHeight = 0;
+		_onUpdatePostPending = false;
+		_ignoreOldScrollPos = false;
 	}
 	
 	virtual void Draw()
@@ -75,10 +79,7 @@ public:
 	{
 		Events::_newEventsCount = 0;
 		pos = 0;
-		count = Events::GetEventsCount();
-		long newScrollPos = CalcScrollPos(pos);
-		Events::Cache(count);
-		UpdateScroolPos(newScrollPos);
+		OnUpdatePos(true);
 	}
 	
 	virtual bool OnKeyDown(char &key)
@@ -146,10 +147,7 @@ protected:
 		if (pos >= newEventsCount)
 			pos -= newEventsCount;
 		
-		count = Events::GetEventsCount();
-		long newScrollPos = CalcScrollPos(pos);
-		Events::Cache(count - newScrollPos);
-		UpdateScroolPos(newScrollPos);
+		OnUpdatePos(true);
 		
 		Events::_newEventsCount = 0;
 	}
@@ -159,12 +157,7 @@ protected:
 		if (pos == 0)
 			return;
 		pos--;
-		
-		count = Events::GetEventsCount();
-		long newScrollPos = CalcScrollPos(pos);
-		if (newScrollPos != _scrollPos)
-			Events::Cache(count - newScrollPos);
-		UpdateScroolPos(newScrollPos);
+		OnUpdatePos(false);
 	}
 	
 	void SelectNext()
@@ -175,11 +168,7 @@ protected:
 			return;
 		
 		pos++;
-		count = Events::GetEventsCount();
-		long newScrollPos = CalcScrollPos(pos);
-		if (newScrollPos != _scrollPos)
-			Events::Cache(count - newScrollPos);
-		UpdateScroolPos(newScrollPos);
+		OnUpdatePos(false);
 	}
 	
 	long CalcScrollPos(unsigned long newPos)
@@ -258,6 +247,29 @@ protected:
 				b |= sb;
 			}
 			display.WriteByte(wndWidth - 1, y + _headerHeight, b);
+		}
+	}
+	
+	void OnUpdatePos(bool ignoreOldScrollPos)
+	{
+		_onUpdatePostPending = true;
+		_ignoreOldScrollPos = ignoreOldScrollPos;
+	}
+public:	
+	void DoLoPiorityWork()
+	{
+		if (_onUpdatePostPending)
+		{
+			volatile bool ignoreOldScrollPos = _ignoreOldScrollPos;
+			_onUpdatePostPending = false;
+			
+			count = Events::GetEventsCount();
+			long newScrollPos = CalcScrollPos(pos);
+			if (newScrollPos != _scrollPos || ignoreOldScrollPos)
+			{
+				Events::Cache(count - newScrollPos);
+			}
+			UpdateScroolPos(newScrollPos);
 		}
 	}
 };

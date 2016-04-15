@@ -10,11 +10,9 @@ int media_read(unsigned long sector, unsigned char *buffer, unsigned long sector
 	if (sectorsCount > 1)
 		return 0;
 	unsigned long long addr = sector * FAT_SECTOR_SIZE;
-	/*if (!Flash.ReadBlock(addr, buffer, FAT_SECTOR_SIZE))
-		return 0;*/
-	/*if (!Flash.ReadSector(addr, buffer))
-		return 0;*/
-	return 0;
+	if (!Flash.ReadBlock(addr, buffer, FAT_SECTOR_SIZE))
+		return 0;
+	return 1;
 }
 
 int media_write(unsigned long sector, unsigned char *buffer, unsigned long sectorsCount)
@@ -22,11 +20,9 @@ int media_write(unsigned long sector, unsigned char *buffer, unsigned long secto
 	if (sectorsCount > 1)
 		return 0;
 	unsigned long long addr = sector * FAT_SECTOR_SIZE;
-	/*
 	if (!Flash.WriteBlock(addr, buffer, FAT_SECTOR_SIZE))
 		return 0;
-	return 1;*/
-	return 0;
+	return 1;
 }
 
 enum FatState
@@ -40,6 +36,7 @@ enum FatState
 FatState fatState = FatStateInit;
 
 FL_FILE *eventsFile = 0;
+unsigned long eventsFileSize = 0;
 FL_FILE *controllerFile = 0;
 FL_FILE *oscFile = 0;
 
@@ -84,6 +81,10 @@ bool EventsWrite(long int offset, int origin, unsigned char *data, unsigned int 
 	if (res)
 	{
 		res = fl_fwrite(data, count, 1, eventsFile) == count;
+		if (res)
+		{
+			eventsFileSize += count;
+		}
 	}
 
 	fl_fclose(eventsFile);
@@ -94,9 +95,18 @@ bool EventsWrite(long int offset, int origin, unsigned char *data, unsigned int 
 bool EventsSeek(long int offset, int origin, unsigned long &pos)
 {
 	if (fatState != FatStateReady)
+	{
+		eventsFileSize = 0;
 		return false;
+	}
     
-    eventsFile = (FL_FILE*)fl_fopen("/events.bin", "rw");
+	if (eventsFileSize > 0)
+	{
+		pos = eventsFileSize;
+		return true;
+	}
+	
+	eventsFile = (FL_FILE*)fl_fopen("/events.bin", "rw");
 	
 	if (!eventsFile)
 		return false;
@@ -104,6 +114,8 @@ bool EventsSeek(long int offset, int origin, unsigned long &pos)
 	unsigned long p = 0;
 	fl_fgetpos(eventsFile, &p);
 	pos = p;
+	eventsFileSize = pos;
+	
 	fl_fclose(eventsFile);
 	eventsFile = 0;
 	return res;
