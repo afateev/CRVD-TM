@@ -35,7 +35,7 @@ class SpiWrapper
 public:
 	static void Init()
 	{
-		Hardware::SetDivider(Hardware::Div32);
+		//Hardware::SetDivider(Hardware::Div8);
 		Hardware::Enable(true, true, SckPolarity);
 		CsPort::SetOutputPin(CsPin);
 		Select(false);
