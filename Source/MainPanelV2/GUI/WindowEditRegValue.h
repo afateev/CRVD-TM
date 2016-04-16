@@ -271,18 +271,18 @@ public:
 };
 
 #define CONTROLLER_PARAM_DECL(VarName, VarCaption, VarType, IntPart, FracPart, Format, Divider) MenuItem menuController##VarName (VarCaption, ShowWindow<wndIdController##VarName>, GetEditingValueString<wndIdController##VarName>); \
-	WindowEditRegValue<Display, display, VarType, ControlParamInput<IntPart, FracPart>, \
+	WindowEditRegValue<&menuBigFont, Display, display, VarType, ControlParamInput<IntPart, FracPart>, \
 		ActiveDriveControllerParams::GetRegValue_##VarType<ActiveDriveControllerParams::Reg##VarName>, \
 		ActiveDriveControllerParams::SetRegValue_##VarType<ActiveDriveControllerParams::Reg##VarName>, \
         Divider> \
-			wndController##VarName(&menuBigFont, "Параметры регулятора", VarCaption, Format);
+			wndController##VarName(/*&menuBigFont, */"Параметры регулятора", VarCaption, Format);
 
 #define CONTROLLER_PARAM_COS_DECL(VarName, VarCaption, VarType, IntPart, FracPart, Format, Divider) MenuItem menuController##VarName (VarCaption, ShowWindow<wndIdController##VarName>, GetEditingValueString<wndIdController##VarName>); \
-	WindowEditRegValue<Display, display, VarType, ControlParamInput<IntPart, FracPart>, \
+	WindowEditRegValue<&menuBigFont, Display, display, VarType, ControlParamInput<IntPart, FracPart>, \
 		ActiveDriveControllerParams::GetAngleSetupDisplay, \
 		ActiveDriveControllerParams::SetAngleSetupDisplay, \
         Divider> \
-			wndController##VarName(&menuBigFont, "Параметры регулятора", VarCaption, Format);
+			wndController##VarName(/*&menuBigFont, */"Параметры регулятора", VarCaption, Format);
 
 
 #define CONTROLLER_PARAM_INIT(VarName) menuListControllerSetup.Add(&menuController##VarName); \
@@ -301,29 +301,29 @@ public:
 	desctop.RegisterWindow(&wndController##VarName, wndIdController##VarName);
 
 #define INDICATION_PARAM_DECL(VarName, VarCaption, VarType, IntPart, FracPart, Format, Divider) MenuItem menuIndication##VarName (VarCaption, ShowWindow<wndIdIndication##VarName>, GetEditingValueString<wndIdIndication##VarName>); \
-	WindowEditRegValue<Display, display, VarType, ControlParamInput<IntPart, FracPart>, \
+	WindowEditRegValue<&menuBigFont, Display, display, VarType, ControlParamInput<IntPart, FracPart>, \
 		ActiveDriveControllerParams::GetIndicationParamValue_##VarType<ActiveDriveControllerParams::IndicationParam##VarName>, \
 		ActiveDriveControllerParams::SetIndicationParamValue_##VarType<ActiveDriveControllerParams::IndicationParam##VarName>, \
         Divider> \
-			wndIndication##VarName(&menuBigFont, "Параметры индикации", VarCaption, Format);
+			wndIndication##VarName(/*&menuBigFont, */"Параметры индикации", VarCaption, Format);
 
 #define INDICATION_PARAM_INIT(VarName) menuListIndicationSetup.Add(&menuIndication##VarName); \
 	wndIndication##VarName.SetOnClose(OnWindowClose); \
 	desctop.RegisterWindow(&wndIndication##VarName, wndIdIndication##VarName);
 
 #define MODBUS_PARAM_DECL(VarName, VarCaption, VarType, IntPart, FracPart, Format, Divider) MenuItem menuModbus##VarName (VarCaption, ShowWindow<wndIdModbus##VarName>, GetEditingValueString<wndIdModbus##VarName>); \
-	WindowEditRegValue<Display, display, VarType, ControlParamInput<IntPart, FracPart>, \
+	WindowEditRegValue<&menuBigFont, Display, display, VarType, ControlParamInput<IntPart, FracPart>, \
 		ActiveDriveControllerParams::GetModbusParamValue_##VarType<ActiveDriveControllerParams::ModbusParam##VarName>, \
 		ActiveDriveControllerParams::SetModbusParamValue_##VarType<ActiveDriveControllerParams::ModbusParam##VarName>, \
         Divider> \
-			wndModbus##VarName(&menuBigFont, "Modbus", VarCaption, Format);
+			wndModbus##VarName(/*&menuBigFont, */"Modbus", VarCaption, Format);
 
 #define MODBUS_PARAM_INIT(VarName) menuListModbusSetup.Add(&menuModbus##VarName); \
 	wndModbus##VarName.SetOnClose(OnWindowClose); \
 	desctop.RegisterWindow(&wndModbus##VarName, wndIdModbus##VarName);
 
 
-template<class DisplayType, DisplayType &display,
+template<Rblib::FbgFont *_bigFont, class DisplayType, DisplayType &display,
 class ValueType, class EditorType,
 ValueType (Getter)(),
 void (Setter)(ValueType),
@@ -337,7 +337,7 @@ protected:
 	static const unsigned int _applyId = 0;
 	static const unsigned int _cancelId = 1;
 	
-	Font *_bigFont;
+	//Font *_bigFont;
 	EditorType _newValue;
 	ControlButton _apply;
 	ControlButton _cancel;
@@ -345,9 +345,9 @@ protected:
 	const char *_subHeader;
 	const char *_formatString;
 public:
-	WindowEditRegValue(Font *bigFont, const char *header, const char *subHeader, const char *formatString)
+	WindowEditRegValue(/*Font *bigFont, */const char *header, const char *subHeader, const char *formatString)
 	{
-		_bigFont = bigFont;
+		//_bigFont = bigFont;
 		_header = header;
 		_subHeader = subHeader;
 		_formatString = formatString;
@@ -499,5 +499,9 @@ protected:
 		return _formatString;
 	}
 };
-
+/*
+template <class DisplayType, DisplayType &display, class ValueType, class EditorType, ValueType (Getter)(), void (Setter)(ValueType), int Divider>
+WindowEditRegValue<DisplayType, display, ValueType, EditorType, Getter, Setter, Divider>::Font *
+WindowEditRegValue<DisplayType, display, ValueType, EditorType, Getter, Setter, Divider>::_bigFont = 0;
+*/
 #endif
