@@ -36,7 +36,7 @@ public:
 			{
 				if (ModBus::IsReady())
 				{
-					ModBus::ChangeSpeed(Config::MainComPortClockSourceFrequency, 115200);
+					ModBus::ChangeSpeed(Config::MainComPortClockSourceFrequency, 9600);
 					unsigned char address = BusAddres;
                     unsigned int requestSize = ModBusMaster::BuildReadHoldingRegisters(_request, address, FirstReg, RegCount);
 					ModBus::OnTxCompleteCallback = OnTxCompleteCallback;

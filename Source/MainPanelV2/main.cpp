@@ -324,7 +324,7 @@ int main()
 		wndEvents.DoLoPiorityWork();
 		ActiveDriveControllerParams::Run();
 		
-		StatorRotorIndicators.Update();
+		//StatorRotorIndicators.Update();
 		
 		Flash.Run();
 		switch(fatState)
@@ -385,6 +385,6 @@ int main()
 			break;
 		}
 		
-		OscGet::Run();
+		//OscGet::Run();
 	}
 }

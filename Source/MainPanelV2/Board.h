@@ -61,6 +61,7 @@ namespace MainPanel
 				
 				Rcc::EnableClockAfio();
 				Rcc::EnableClockPortA();
+				Rcc::EnableClockPortB();
 				Rcc::EnableClockPortC();
 				Rcc::EnableClockPortD();
 				Rcc::EnableClockPortE();

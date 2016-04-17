@@ -238,6 +238,11 @@ public:
 	
 	static void Push(Event event)
 	{
+		if (_events.size() > MaxCount - 2)
+		{
+			return;
+		}
+			
 		if (!event.IsNoLog() && event.GetCode() != EventEmpty)
 			_events.push(event);
 		
