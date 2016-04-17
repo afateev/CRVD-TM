@@ -13,7 +13,9 @@ template<
 		class Connection,		// конфигурация схемы подключения
 		class Primary,			// Основной регулятор
 		class Reserve,			// Резервный регулятор
-		class Emergency,		// Аварийный регулятор
+		class DiagnosticMain,	// Диагностика основного
+		class DiagnosticReserv,	// Диагностика резервного
+		class DiagnosticTemperature,	// Температура
 		class InsulationControl	// Плата контроля изолции
 		>
 class PortScanner
@@ -31,7 +33,9 @@ protected:
 		StateInit,
 		StateScanPrimary,
 		StateScanReserve,
-		StateScanEmergency,
+		StateScanDiagnosticMain,
+		StateScanDiagnosticReserv,
+		StateScanDiagnosticTemperature,
 		StateScanInsulationControl,
 	};
 	
@@ -70,10 +74,22 @@ public:
 			if (Reserve::Run())
 				Next();
 			break;
-		case StateScanEmergency:
+		case StateScanDiagnosticMain:
 			ControlPort::SetBit(_contolPin0);
 			ControlPort::SetBit(_contolPin1);
-			if (Emergency::Run())
+			if (DiagnosticMain::Run())
+				Next();
+			break;
+		case StateScanDiagnosticReserv:
+			ControlPort::SetBit(_contolPin0);
+			ControlPort::SetBit(_contolPin1);
+			if (DiagnosticReserv::Run())
+				Next();
+			break;
+		case StateScanDiagnosticTemperature:
+			ControlPort::SetBit(_contolPin0);
+			ControlPort::SetBit(_contolPin1);
+			if (DiagnosticTemperature::Run())
 				Next();
 			break;
 		case StateScanInsulationControl:
@@ -105,9 +121,15 @@ protected:
 		case StateScanReserve:
 			if (RunCountReserve < 255)
 				RunCountReserve++;
-			_state = StateScanEmergency;
+			_state = StateScanDiagnosticMain;
 			break;
-		case StateScanEmergency:
+		case StateScanDiagnosticMain:
+			_state = StateScanDiagnosticReserv;
+			break;
+		case StateScanDiagnosticReserv:
+			_state = StateScanDiagnosticTemperature;
+			break;
+		case StateScanDiagnosticTemperature:
 			_state = StateScanInsulationControl;
 			if (SkipInsulationControl)
 				Next();
@@ -123,27 +145,27 @@ protected:
 	}
 };
 
-template<class Connection, class Primary, class Reserve, class Emergency, class InsulationControl>
-PortScanner<Connection, Primary, Reserve, Emergency, InsulationControl>::State
-PortScanner<Connection, Primary, Reserve, Emergency, InsulationControl>::_state = 
-PortScanner<Connection, Primary, Reserve, Emergency, InsulationControl>::StateInit;
+template<class Connection, class Primary, class Reserve, class DiagnosticMain, class DiagnosticReserv, class DiagnosticTemperature, class InsulationControl>
+PortScanner<Connection, Primary, Reserve, DiagnosticMain, DiagnosticReserv, DiagnosticTemperature, InsulationControl>::State
+PortScanner<Connection, Primary, Reserve, DiagnosticMain, DiagnosticReserv, DiagnosticTemperature, InsulationControl>::_state = 
+PortScanner<Connection, Primary, Reserve, DiagnosticMain, DiagnosticReserv, DiagnosticTemperature, InsulationControl>::StateInit;
 
-template<class Connection, class Primary, class Reserve, class Emergency, class InsulationControl>
-bool PortScanner<Connection, Primary, Reserve, Emergency, InsulationControl>::SkipPrimary = false;
+template<class Connection, class Primary, class Reserve, class DiagnosticMain, class DiagnosticReserv, class DiagnosticTemperature, class InsulationControl>
+bool PortScanner<Connection, Primary, Reserve, DiagnosticMain, DiagnosticReserv, DiagnosticTemperature, InsulationControl>::SkipPrimary = false;
 
-template<class Connection, class Primary, class Reserve, class Emergency, class InsulationControl>
-bool PortScanner<Connection, Primary, Reserve, Emergency, InsulationControl>::SkipReserve = false;
+template<class Connection, class Primary, class Reserve, class DiagnosticMain, class DiagnosticReserv, class DiagnosticTemperature, class InsulationControl>
+bool PortScanner<Connection, Primary, Reserve, DiagnosticMain, DiagnosticReserv, DiagnosticTemperature, InsulationControl>::SkipReserve = false;
 
-template<class Connection, class Primary, class Reserve, class Emergency, class InsulationControl>
-bool PortScanner<Connection, Primary, Reserve, Emergency, InsulationControl>::SkipInsulationControl = false;
+template<class Connection, class Primary, class Reserve, class DiagnosticMain, class DiagnosticReserv, class DiagnosticTemperature, class InsulationControl>
+bool PortScanner<Connection, Primary, Reserve, DiagnosticMain, DiagnosticReserv, DiagnosticTemperature, InsulationControl>::SkipInsulationControl = false;
 
-template<class Connection, class Primary, class Reserve, class Emergency, class InsulationControl>
-unsigned char PortScanner<Connection, Primary, Reserve, Emergency, InsulationControl>::RunCountPrimary = 0;
+template<class Connection, class Primary, class Reserve, class DiagnosticMain, class DiagnosticReserv, class DiagnosticTemperature, class InsulationControl>
+unsigned char PortScanner<Connection, Primary, Reserve, DiagnosticMain, DiagnosticReserv, DiagnosticTemperature, InsulationControl>::RunCountPrimary = 0;
 
-template<class Connection, class Primary, class Reserve, class Emergency, class InsulationControl>
-unsigned char PortScanner<Connection, Primary, Reserve, Emergency, InsulationControl>::RunCountReserve = 0;
+template<class Connection, class Primary, class Reserve, class DiagnosticMain, class DiagnosticReserv, class DiagnosticTemperature, class InsulationControl>
+unsigned char PortScanner<Connection, Primary, Reserve, DiagnosticMain, DiagnosticReserv, DiagnosticTemperature, InsulationControl>::RunCountReserve = 0;
 
-template<class Connection, class Primary, class Reserve, class Emergency, class InsulationControl>
-unsigned char PortScanner<Connection, Primary, Reserve, Emergency, InsulationControl>::RunCountInsulationControl = 0;
+template<class Connection, class Primary, class Reserve, class DiagnosticMain, class DiagnosticReserv, class DiagnosticTemperature, class InsulationControl>
+unsigned char PortScanner<Connection, Primary, Reserve, DiagnosticMain, DiagnosticReserv, DiagnosticTemperature, InsulationControl>::RunCountInsulationControl = 0;
 
 #endif

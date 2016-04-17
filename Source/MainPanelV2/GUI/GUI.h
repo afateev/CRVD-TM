@@ -50,6 +50,7 @@ MenuItemList menuListModbusSetup("Настройка Modbus");
 MenuItemList menuListControllerSetup("Параметры регулятора");
 MenuItemList menuListControllerUstSetup("Уставки регулирования");
 MenuItemList menuListIndicationSetup("Параметры индикации");
+MenuItemList menuListDiagnostic("Диагностика");
 
 MenuItem menuViewWaveforms("Осциллограммы", ShowWindow<wndIdOscList>);
 MenuItem menuViewEvents("Журнал событий", ShowWindow<wndIdEvents>);
@@ -59,6 +60,7 @@ MenuItem menuSystemSetup("Системные параметры", &menuListSystemSetup);
 MenuItem menuControllerSetup("Параметры регулятора", &menuListControllerSetup);
 MenuItem menuControllerUstSetup("Уставки регулятора", &menuListControllerUstSetup);
 MenuItem menuIndicationSetup("Параметры индикации", &menuListIndicationSetup);
+MenuItem menuDiagnostic("Диагностика", &menuListDiagnostic);
 
 MenuItem menuGraph("Осциллограмма", ShowOsc);
 MenuItem menuDebugRegisters("Регистры", ShowWindow<wndIdDebugRegisters>);
@@ -70,6 +72,12 @@ MenuItem menuSetupModbus("Modbus", &menuListModbusSetup);
 MenuItem menuResetOperatingTime("Сбросить счётчик наработки              ", ShowWindow<wndIdResetOperatingTime>);
 MenuItem menuSetupIP("IP адрес");
 MenuItem menuSetupNetwork("Сетевой обмен");
+
+MenuItem menuDiagnosticMain("Основной", ShowWindow<wndIdDiagnosticMain>);
+MenuItem menuDiagnosticReserv("Резервный", ShowWindow<wndIdDiagnosticReserv>);
+MenuItem menuDiagnosticTemperature("Температура", ShowWindow<wndIdDiagnosticTemperature>);
+MenuItem menuDiagnosticAnalogOutputs("Аналоговые выходы", ShowWindow<wndIdDiagnosticAnalogOutputs>);
+MenuItem menuDiagnosticLinkStatus("Состояние связи", ShowWindow<wndIdDiagnosticLinkStatus>);
 
 //MenuItem menuControllerNominalStatorCurrent("Номинальный ток статора", ShowWindow<wndIdControllerNominalStatorCurrent>, GetEditingValueString<wndIdControllerNominalStatorCurrent>);
 //MenuItem menuControllerRotorCurrentMax("I ротора максимальное (А)", ShowWindow<wndIdControllerRotorCurrentMax>, GetEditingValueString<wndIdControllerRotorCurrentMax>);
@@ -86,6 +94,8 @@ WindowResetOperatingTime<Display, display> wndResetOperatingTime(&menuBigFont);
 typedef WindowGraph<Display, display, Drivers::DrawContextType, &Drivers::DrawContext> WindowGraphType;
 WindowGraphType wndGraph;
 WindowOscList<Display, display, OscGet, OscFileFormat::OscFileDescription, DesctopType, &desctop, WindowGraphType, &wndGraph, wndIdGraph> wndOscList;
+WindowDiagnosticRegulator<Display, display> wndDiagnosticRegulatorMain;
+WindowDiagnosticRegulator<Display, display> wndDiagnosticRegulatorReserv;
 
 void OnWindowClose()
 {
@@ -111,6 +121,7 @@ void MenuInit()
 	menuListRoot.Add(&menuSystemSetup);
 	menuListRoot.Add(&menuControllerSetup);
 	menuListRoot.Add(&menuIndicationSetup);
+	menuListRoot.Add(&menuDiagnostic);
 	menuListRoot.Add(&menuDebugRegisters);
 	menuListRoot.Add(&menuMainScreen);
 	//menuListRoot.Add(&menuHideAll);
@@ -124,6 +135,12 @@ void MenuInit()
     
     //menuListControllerSetup.Add(&menuControllerNominalStatorCurrent);
 	menuListIndicationSetup.Add(&menuResetOperatingTime);
+	
+	menuListDiagnostic.Add(&menuDiagnosticMain);
+	menuListDiagnostic.Add(&menuDiagnosticReserv);
+	menuListDiagnostic.Add(&menuDiagnosticTemperature);
+	menuListDiagnostic.Add(&menuDiagnosticAnalogOutputs);
+	menuListDiagnostic.Add(&menuDiagnosticLinkStatus);
 		
 	mainMenu.SetRoot(&menuListRoot);
 }
@@ -147,6 +164,12 @@ void DesctopInit()
 	// TODO wndResetOperatingTime.GetOperatingTimeCallback = ActiveDriveControllerParams::GetOperatingTime();
 	// TODO wndResetOperatingTime.ResetOperatingTimeCallback = ActiveDriveControllerParams::ResetOperatingTime();
 	wndOscList.SetOnClose(OnWindowClose);
+	
+	wndDiagnosticRegulatorMain.SetOnClose(OnWindowClose);
+	wndDiagnosticRegulatorMain.GetRegValueCallback = MainControllerDiagnostic::GetRegValue;
+	
+	wndDiagnosticRegulatorReserv.SetOnClose(OnWindowClose);
+	wndDiagnosticRegulatorReserv.GetRegValueCallback = ReservControllerDiagnostic::GetRegValue;
     
 	
 	desctop.RegisterWindow(&wndMain, wndIdMain);
@@ -156,6 +179,8 @@ void DesctopInit()
 	desctop.RegisterWindow(&wndEvents, wndIdEvents);
 	desctop.RegisterWindow(&wndConfigSystemDateTime, wndIdConfigSystemDateTime);
 	desctop.RegisterWindow(&wndResetOperatingTime, wndIdResetOperatingTime);
+	desctop.RegisterWindow(&wndDiagnosticRegulatorMain, wndIdDiagnosticMain);
+	desctop.RegisterWindow(&wndDiagnosticRegulatorReserv, wndIdDiagnosticReserv);
     
 	//wndControllerNominalStatorCurrent.SetOnClose(OnWindowClose);
 	//desctop.RegisterWindow(&wndControllerNominalStatorCurrent, wndIdControllerNominalStatorCurrent);

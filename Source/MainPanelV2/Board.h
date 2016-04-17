@@ -214,6 +214,12 @@ namespace MainPanel
 			Gpio::C::SetMode(12, Gpio::C::ModeOutput);
 			Gpio::C::SetConfig(12, Gpio::C::ConfigOutputAlternatePushPull);
 			Afio::RemapSpi3(1);
+			
+			// 485 Diagnostics Master
+			// RE/DE
+			Gpio::B::SetMode(7, Gpio::B::ModeOutput);
+			Gpio::B::SetConfig(7, Gpio::B::ConfigOutputPushPull);
+			Gpio::B::ClearBit(7);
 		}
 		
 		static void Rs485Init(int boudrate, bool parityEnable, bool parityEven)
@@ -223,6 +229,18 @@ namespace MainPanel
 		
 		static void OnTimer1Update()
 		{
+		}
+		
+		static void DiagnosticRs485TxEnable(bool enable)
+		{
+			if (enable)
+			{
+				Gpio::B::SetBit(7);
+			}
+			else
+			{
+				Gpio::B::ClearBit(7);
+			}
 		}
 	};
 }

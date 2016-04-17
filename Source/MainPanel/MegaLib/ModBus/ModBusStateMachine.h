@@ -53,6 +53,9 @@ public:
 template<class Uart, unsigned int BufferSize>
 class ModBusMasterStateMachine
 {
+public:
+	typedef Rblib::CallbackWrapper<> OnTxCompleteCallbackType;
+	static OnTxCompleteCallbackType OnTxCompleteCallback;
 protected:
 	enum State
 	{
@@ -173,6 +176,8 @@ public:
 			//Gpio::_D::SetOutputPin(2);
 			//Gpio::_D::SetBit(2);
 			_state = StateWaitRead;
+			
+			OnTxCompleteCallback();
 		}
 	}
 	static void OnRead(unsigned int nextByte)
@@ -216,6 +221,9 @@ public:
 		return crcCalculated == crcExpected;
 	}
 };
+
+template<class Uart, unsigned int BufferSize>
+ModBusMasterStateMachine<Uart, BufferSize>::OnTxCompleteCallbackType ModBusMasterStateMachine<Uart, BufferSize>::OnTxCompleteCallback;
 
 template<class Uart, unsigned int BufferSize>
 typename ModBusMasterStateMachine<Uart, BufferSize>::State

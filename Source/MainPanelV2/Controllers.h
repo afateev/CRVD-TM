@@ -5,6 +5,7 @@
 #include "DriveController.h"
 #include "DriveControllerParams.h"
 #include "InsulationControl.h"
+#include "ControllerDiagnostic.h"
 #include "DriveControllerSwitch.h"
 #include "PortScanner.h"
 #include "DriveEventsGenerator.h"
@@ -18,6 +19,9 @@ typedef ModBusMasterStateMachine<Drivers::Board::MainComPort, 256> 		ModBusState
 typedef DriveController<ModBusState, 0x01, 0x02> 	PrimaryController;
 typedef DriveController<ModBusState, 0x02, 0x01> 	ReserveController;
 typedef InsulationControl<ModBusState, 0x01> 		InsulationController;
+typedef ControllerDiagnostic<ModBusState, 0x01, 1, 17>	MainControllerDiagnostic;
+typedef ControllerDiagnostic<ModBusState, 0x02, 1, 17>	ReservControllerDiagnostic;
+typedef ControllerDiagnostic<ModBusState, 0x03, 1, 17>	ControllerDiagnosticTemperature;
 
 DriveControllerInterface<PrimaryController, true>	PrimaryControllerInterface;
 DriveControllerInterface<ReserveController, false>	ReserveControllerInterface;
@@ -37,7 +41,7 @@ public:
 };
 
 
-typedef PortScanner<Drivers::Board::PortScanerConnection, PrimaryController, ReserveController, Empty, InsulationController> portScanner;
+typedef PortScanner<Drivers::Board::PortScanerConnection, PrimaryController, ReserveController, MainControllerDiagnostic, ReservControllerDiagnostic, ControllerDiagnosticTemperature, InsulationController> portScanner;
 
 typedef DriveEventsGenerator<ActiveDriveControllerParams, Events> DriveEvets;
 

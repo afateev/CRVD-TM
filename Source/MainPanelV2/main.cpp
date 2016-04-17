@@ -254,6 +254,10 @@ int main()
 	Drivers::Board::GuiTimer::UpdateInterruptHandler = GuiTimerTick;
 	Drivers::Board::ModbusSlaveTimer::UpdateInterruptHandler = ModbusSlaveTimerTick;
 	
+	MainControllerDiagnostic::TxEnableCallback = Drivers::Board::DiagnosticRs485TxEnable;
+	ReservControllerDiagnostic::TxEnableCallback = Drivers::Board::DiagnosticRs485TxEnable;
+	ControllerDiagnosticTemperature::TxEnableCallback = Drivers::Board::DiagnosticRs485TxEnable;
+	
 	display.SelectContext(&Drivers::DrawContext);
 			
 	display.MoveCursorTo((40 - 18) / 2, 104);
