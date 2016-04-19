@@ -38,6 +38,67 @@ struct OscRequestInfo
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
 class DriveController
 {
+public:
+	enum Registers
+	{
+		RegUst = 1,
+		RegIst = 2,
+		RegUrot = 3,
+		RegIrot = 4,
+		RegPhi = 5,
+		RegOscCurPos = 9,
+		RegOscEngineStart = 10,
+		RegOscEngineStop = 11,
+		RegOscEngineEvent = 12,
+		RegOscChechoutStart = 13,
+		RegOscChechoutStop = 14,
+        // Параметры регулятора
+        RegNominalStatorCurrent = 100,
+        RegStartStatorCurrent = 102,
+        RegNominalRotorCurrent = 104,
+        RegStartRotorCurrent = 106,
+		RegRotorCurrentMax = 108,
+		RegRotorCurrentMin = 110,
+        RegCosChannel = 112,
+		RegAngleSetupDisplay = 113,
+		RegEnergizingCurrentSetup = 115,
+		RegGlideSetup = 117,
+        RegGlideStart = 119,
+		//RegH_ka_w_c0 = 121,
+		RegH_ka_f_I0 = 122,
+		RegH_ka_f_tg = 124,
+		RegH_ka_f_v = 126,
+        RegLowStatorVoltageProtection = 128,
+		RegLowStatorVoltageProtectionThreshold = 129,
+        RegLowStatorVoltageProtectionTimer = 131,
+        RegLowStatorCurrentProtection = 132,
+		RegLowStatorCurrentProtectionThreshold = 133,
+        RegLowStatorCurrentProtectionTimer = 135,
+        RegAsyncRotorRotationCount = 136,
+        RegAsyncCountdownTimer = 137,
+        RegAsyncProtectionTimer = 138,
+        RegEnergizingLostTimer = 139,
+        RegLongStartTimer = 140,
+		RegShortCircuitProtectionThreshold = 141,
+        RegShortCircuitProtectionTimer = 143,
+		RegOverloadProtectionThreshold = 145,
+		RegRotorCoolingCurrent = 147,
+		RegRotorCoolingTime = 149,
+		RegHeatingTimeOnOverload0_10 = 151,
+		RegHeatingTimeOnOverload10_20 = 153,
+		RegHeatingTimeOnOverload20 = 155,
+        RegWaitAfterDriveOn = 157,
+        RegWaitAfterStatorCurrenLow = 158,
+        RegWaitAfterenergizingOn = 159,
+        RegStartForsingTime = 160,
+        RegStatorVoltageMaxDisplay = 161,
+        RegStatorCurrentMaxDisplay = 162,
+        RegRotorVoltageMaxDisplay = 163,
+        RegRotorCurrentMaxDisplay = 164
+	};
+	
+	typedef Rblib::CallbackWrapper<bool &> AllowOscReadCallbackType;
+	typedef Rblib::CallbackWrapper<unsigned int, unsigned char *, int> OnOscReadedCallbackType;
 protected:
 	enum State
 	{
@@ -78,12 +139,43 @@ protected:
     static bool _readOneShot;   // Перечитать один раз несмотря на чтение осциллограмм
     static unsigned int _problemCount;
     
+	static unsigned int _oscLoadedPos;
+	
 	static bool _oscRequestWait;
 	static bool _oscResponseReady;
 	static OscRequestInfo _oscRequest;
 public:	
 	static bool DoOnlyLowerRegsRequest;
+	static AllowOscReadCallbackType AllowOscReadCallback;
+	static OnOscReadedCallbackType OnOscReadedCallback;
 public:
+	static int GetOscLoadCount()
+	{
+		int res = 0;
+		
+		if (HasRegValue(RegOscCurPos))
+		{
+			unsigned int curPos = GetRegValue(RegOscCurPos);
+			res = curPos - _oscLoadedPos;
+			if (curPos < _oscLoadedPos)
+			{
+				res = 0xFFFF - _oscLoadedPos + 1;
+			}
+			
+			if (res > 20)
+			{
+				res = 20;
+			}
+			
+			if (res < 20)
+			{
+				res = 0;
+			}
+		}
+		
+		return res;
+	}
+	
 	static bool Run()
 	{
 		switch(_state)
@@ -94,6 +186,40 @@ public:
 				{
                     ModBus::ChangeSpeed(Config::MainComPortClockSourceFrequency, 115200);
 										
+					if (_regRequestCount > 0)
+					{
+						// осциллограмму вычитываем только из активного регулятора, а он имеет всегда адрес №1
+						if (_address == 1)
+						{
+							int loadCount = GetOscLoadCount();
+							
+							if (loadCount)
+							{
+								bool allowOscRead = false;
+								AllowOscReadCallback(allowOscRead);
+								if (allowOscRead)
+								{
+										unsigned int requestSize = ModBusMaster::BuildReadOscPoints(_request, _address, _oscLoadedPos, loadCount);
+										ModBus::SendRequest(_request, requestSize);
+										
+										_regRequestCount--;
+										
+										_state = StateWait;
+										break;
+								}
+							}
+						}
+						else
+						{
+							// сбросить _oscLoadedPos не текущую позицию чтобы при активации начать качать с нее
+							if (HasRegValue(RegOscCurPos))
+							{
+								unsigned int curPos = GetRegValue(RegOscCurPos);
+								_oscLoadedPos = curPos;
+							}
+						}
+					}
+					/*
 					if (_oscRequestWait && _regRequestCount > 0)
 					{
 						unsigned int first = _oscRequest.StartPoint;
@@ -106,7 +232,7 @@ public:
 						
 						_state = StateWait;
 					}
-					else
+					else*/
 					{
 						unsigned int first = requests[_currentRequest].FirstReg;
 						unsigned int count = requests[_currentRequest].RegsCount;
@@ -126,7 +252,7 @@ public:
 						
 						if (_regRequestCount < 255)
 						{
-							_regRequestCount++;
+							_regRequestCount = 10;
 						}
 						
 						_state = StateWait;
@@ -196,12 +322,17 @@ public:
 							
 							if (oscSize * regQuantity == _response[2])
 							{
+								OnOscReadedCallback(_oscLoadedPos * oscSize, &_response[3], oscSize * regQuantity);
+								
+								_oscLoadedPos += regQuantity;
+								
+								/*
 								_oscResponseReady = true;
 								
 								if (_oscRequest.DstBuffer != 0)
 								{
 									memcpy(_oscRequest.DstBuffer, &_response[3], oscSize * regQuantity);
-								}
+								}*/
 							}
 						}
 					}
@@ -267,7 +398,16 @@ public:
                     }
                     else
                     {
-                        _state = StateComplete;
+                        int loadCount = GetOscLoadCount();
+						
+						if (loadCount > 0)
+						{
+							_state = StateRequest;
+						}
+						else
+						{
+							_state = StateComplete;
+						}
                     }
                 }
             }
@@ -432,6 +572,12 @@ public:
 };
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
+DriveController<ModBus, MainAddres, AdditionalAddress>::AllowOscReadCallbackType DriveController<ModBus, MainAddres, AdditionalAddress>::AllowOscReadCallback;
+
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
+DriveController<ModBus, MainAddres, AdditionalAddress>::OnOscReadedCallbackType DriveController<ModBus, MainAddres, AdditionalAddress>::OnOscReadedCallback;
+
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
 typename DriveController<ModBus, MainAddres, AdditionalAddress>::State
 DriveController<ModBus, MainAddres, AdditionalAddress>::_state = 
 DriveController<ModBus, MainAddres, AdditionalAddress>::StateRequest;
@@ -478,6 +624,9 @@ bool DriveController<ModBus, MainAddres, AdditionalAddress>::_readOneShot = fals
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
 unsigned int DriveController<ModBus, MainAddres, AdditionalAddress>::_problemCount = 0;
+
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
+unsigned int DriveController<ModBus, MainAddres, AdditionalAddress>::_oscLoadedPos = 0;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
 bool DriveController<ModBus, MainAddres, AdditionalAddress>::_oscRequestWait = false;
