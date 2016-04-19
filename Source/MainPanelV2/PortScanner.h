@@ -121,7 +121,8 @@ protected:
 		case StateScanReserve:
 			if (RunCountReserve < 255)
 				RunCountReserve++;
-			_state = StateScanDiagnosticMain;
+			//_state = StateScanDiagnosticMain;
+			_state = StateScanInsulationControl;
 			break;
 		case StateScanDiagnosticMain:
 			_state = StateScanDiagnosticReserv;

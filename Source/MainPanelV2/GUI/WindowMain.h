@@ -83,6 +83,8 @@ protected:
 	SevenSegmentDigitBlock<DisplayType, display, 4> _cosFi;
 	SevenSegmentDigitBlock<DisplayType, display, 4> _pAct;
 	SevenSegmentDigitBlock<DisplayType, display, 4> _pReact;
+	
+	char str[40];
 public:
 	WindowMain() : 
 		_cosFi(13 * 8, 16 + 1 + 32 + 16 + 8, 32, 64, 2),
@@ -139,7 +141,6 @@ public:
 	void PrintDateTime(unsigned int x, unsigned int y, time_t dt)
 	{
 		struct tm * timeinfo;
-		char str[20];
 		timeinfo = localtime ( &dt );
 		strftime (str, sizeof(str), "%d.%m.%Y %H:%M:%S", timeinfo);
 		display.MoveCursorTo(x, y);
@@ -149,7 +150,6 @@ public:
 	void PrintDateTimeShort(unsigned int x, unsigned int y, time_t dt)
 	{
 		struct tm * timeinfo;
-		char str[20];
 		timeinfo = localtime ( &dt );
 		strftime (str, sizeof(str), "%d.%m.%Y %H:%M", timeinfo);
 		display.MoveCursorTo(x, y);
@@ -160,7 +160,6 @@ public:
 	{
 		if (0 == controllerName)
 			return;
-		char str[40];
 		unsigned char len;
 		
 		len = sprintf(str, "В работе %s", controllerName);
@@ -170,9 +169,7 @@ public:
 	
 	void PrintPact(float p, bool flagEngineOn, bool flagHasProblem)
 	{
-		char str[40];
 		unsigned char len;
-		
 		len = sprintf(str, "P акт.");
 		display.MoveCursorTo(2,  16 + 1 + 32 + 4);
 		display.WriteLine(str, len);
@@ -193,7 +190,6 @@ public:
 	
 	void PrintPreact(float p, bool flagEngineOn, bool flagHasProblem)
 	{
-		char str[40];
 		unsigned char len;
 		
 		len = sprintf(str, "Q реакт.");
@@ -217,7 +213,6 @@ public:
 	
 	void PrintCosFi(float cosFi, bool flagEngineOn, bool flagHasProblem)
 	{
-		char str[40];
 		unsigned char len;
 		
 		len = sprintf(str, " Cos Ф");
@@ -237,7 +232,6 @@ public:
 	
 	void PrintInsulationResistance(unsigned int x, unsigned int y, unsigned int r)
 	{
-		char str[40];
 		unsigned char len;
 		if (r >= 0xFFFF)
 		{
@@ -258,7 +252,6 @@ public:
 	
 	void PrintMode(unsigned int x, unsigned int y, bool cosFlag, bool rFlag)
 	{
-		char str[40];
 		unsigned char len;
 		
 		len = sprintf(str, "  Канал - ток ротора");
@@ -295,7 +288,6 @@ public:
 	
 	void PrintUpTime(unsigned int x, unsigned int y, unsigned long uptime)
 	{
-		char str[40];
 		unsigned char len;
 		unsigned long seconds = uptime;
 		unsigned long minutes = seconds / 60;
@@ -317,7 +309,6 @@ public:
 	
 	void PrintOperatingTime(unsigned int y, unsigned long operatingTime)
 	{
-		char str[40];
 		unsigned char len;
 		
 		unsigned long seconds = operatingTime;

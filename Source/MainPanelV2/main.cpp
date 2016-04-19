@@ -38,6 +38,7 @@ static void OnTenKiloHertzTimerTick()
 
 static void OnKiloHertzTimerTick()
 {
+	Drivers::Board::Gpio::A::SetBit(8);
 	
 	static unsigned int portScannerCnt = 0;
 	static unsigned int oscGetterCnt = 0;
@@ -104,7 +105,6 @@ static void OnKiloHertzTimerTick()
 	display.Tick();
 	keyboardScanner::Tick();
 	ActiveDriveControllerParams::Tick();
-	
 }
 
 char lastKey = 0;
@@ -117,7 +117,7 @@ void OnKeyDownCallback(char key)
 
 void GuiTimerTick()
 {
-	Drivers::Board::Gpio::A::SetBit(8);
+	Drivers::Board::Gpio::A::ClearBit(8);
 	
 	if (lastKey)
 	{
@@ -176,6 +176,11 @@ void OnRs485DataReceived(unsigned char *data, int count)
 	if (_rxRs485Count > 0)
 	{
 		return;
+	}
+	
+	if (count > sizeof(inputBufferRs485))
+	{
+		count = sizeof(inputBufferRs485);
 	}
 	
 	for (int i = 0; i < count; i++)
@@ -324,7 +329,7 @@ int main()
 		wndEvents.DoLoPiorityWork();
 		ActiveDriveControllerParams::Run();
 		
-		//StatorRotorIndicators.Update();
+		StatorRotorIndicators.Update();
 		
 		Flash.Run();
 		switch(fatState)
@@ -386,5 +391,13 @@ int main()
 		}
 		
 		//OscGet::Run();
+		/*
+		for (unsigned short i = 0; i < 100; i++)
+		{
+			if (OscGet::Run())
+			{
+				break;
+			}
+		}*/
 	}
 }
