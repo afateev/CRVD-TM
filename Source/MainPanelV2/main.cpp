@@ -9,10 +9,15 @@
 #include "KeyboardScanner.h"
 #include "SideIndicators.h"
 #include "Files.h"
+#include "OscCache.h"
 
 typedef KeyboardScanner<Drivers::Board::Gpio::D, 4, 3, 2, 1, 15, 14, 13, 12> keyboardScanner;
 
 SideIndicators<Drivers::StatorDisplay, Drivers::RotorDisplay, ActiveDriveControllerParams> StatorRotorIndicators;
+
+typedef OscCacheImplementer OscCacheType;
+
+OscCacheType OscCache;
 
 void GetMainWindowDisplayData(MainWindowDisplayData &displayData)
 {
@@ -259,6 +264,9 @@ int main()
 	Drivers::Board::GuiTimer::UpdateInterruptHandler = GuiTimerTick;
 	Drivers::Board::ModbusSlaveTimer::UpdateInterruptHandler = ModbusSlaveTimerTick;
 	
+	PrimaryController::AllowOscReadCallback.Set(OscCacheType::AllowRead, &OscCache);
+	PrimaryController::OnOscReadedCallback.Set(OscCacheType::StoreOscPart, &OscCache);
+	
 	MainControllerDiagnostic::TxEnableCallback = Drivers::Board::DiagnosticRs485TxEnable;
 	ReservControllerDiagnostic::TxEnableCallback = Drivers::Board::DiagnosticRs485TxEnable;
 	ControllerDiagnosticTemperature::TxEnableCallback = Drivers::Board::DiagnosticRs485TxEnable;
@@ -297,6 +305,9 @@ int main()
 	
 	Events::Init(EventsRead, EventsWrite, EventsSeek);
 	ActiveDriveControllerParams::Init(ControllerFilesRead, ControllerFilesWrite);
+	
+	OscCache.FileSystemReadyCallback = FileSystemReady;
+	OscCache.CreateFileCallback = OscCacheCreateFile;
 	
 	OscGet::Init(OscFilesRead, OscFilesWrite);
 	
@@ -389,6 +400,8 @@ int main()
 			}
 			break;
 		}
+		
+		OscCache.Run();
 		
 		//OscGet::Run();
 		/*

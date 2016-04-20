@@ -159,6 +159,44 @@ bool ControllerFilesWrite(const char *fileName, long int offset, int origin, uns
 	return res;
 }
 
+void FileSystemReady(bool &ready)
+{
+	ready = fatState == FatStateReady;
+}
+
+void OscCacheCreateFile(unsigned int fileNumber, unsigned int oscFileSize, bool &result)
+{
+	if (fatState != FatStateReady)
+	{
+		return;
+	}
+	
+	char fileName[20];
+	snprintf(fileName, sizeof(fileName), "/osc/cache/%u", fileNumber);
+	
+	FL_FILE *file = (FL_FILE*)fl_fopen(fileName, "rw");
+	
+	if (!file)
+	{
+		fl_createdirectory("/osc/cache/");
+		
+		file = (FL_FILE*)fl_fopen(fileName, "rw");
+	}
+	
+	if (!file)
+	{
+		return;
+	}
+	
+	result = true;
+	result &= fl_fseek(file, 0, 0) == 0;
+	// записываем мусор
+	unsigned char data = 0;
+	result &= fl_fwrite(&data, oscFileSize, 1, file) == oscFileSize;
+
+	fl_fclose(file);
+}
+
 bool OscFilesRead(const char *fileName, long int offset, int origin, unsigned char *data, unsigned int count)
 {
 	if (fatState != FatStateReady)

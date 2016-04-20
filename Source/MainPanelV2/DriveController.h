@@ -157,9 +157,11 @@ public:
 		{
 			unsigned int curPos = GetRegValue(RegOscCurPos);
 			res = curPos - _oscLoadedPos;
+			bool lastPart = false;
 			if (curPos < _oscLoadedPos)
 			{
 				res = 0xFFFF - _oscLoadedPos + 1;
+				lastPart = true;
 			}
 			
 			if (res > 20)
@@ -167,7 +169,7 @@ public:
 				res = 20;
 			}
 			
-			if (res < 20)
+			if (res < 20 && !lastPart)
 			{
 				res = 0;
 			}
@@ -325,6 +327,11 @@ public:
 								OnOscReadedCallback(_oscLoadedPos * oscSize, &_response[3], oscSize * regQuantity);
 								
 								_oscLoadedPos += regQuantity;
+								
+								if (_oscLoadedPos >= 65536)
+								{
+									_oscLoadedPos = 0;
+								}
 								
 								/*
 								_oscResponseReady = true;
