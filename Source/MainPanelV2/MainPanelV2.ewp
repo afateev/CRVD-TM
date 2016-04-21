@@ -147,6 +147,7 @@
         <option>
           <name>CCDefines</name>
           <state>STM32</state>
+          <state>OSC_V3</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
