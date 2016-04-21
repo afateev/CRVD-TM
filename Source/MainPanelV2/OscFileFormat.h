@@ -139,7 +139,7 @@ public:
 			Irot = 0.0;
 		}
 	};
-	
+#pragma pack(push, 1)
 	struct DataStruct
 	{
 		unsigned short Ust;
@@ -156,7 +156,7 @@ public:
 			SwapBytes(&Urot);
 			SwapBytes(&Irot);
 			SwapBytes(&Phi);
-            SwapBytes(&Discrete);
+            		SwapBytes(&Discrete);
 		}
 	protected:
 		void SwapBytes(unsigned short * word)
@@ -188,6 +188,7 @@ public:
             *dword |= wordlo;
 		}
 	};
+#pragma pack(pop)
 #endif
 	
 	static const int OscRecordSize = sizeof(DataStruct);

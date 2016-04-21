@@ -233,6 +233,52 @@ void OscCacheWriteFile(unsigned int fileNumber, unsigned int offset, unsigned ch
 	fl_fclose(file);
 }
 
+unsigned char _oscDataCopyBuffer[200];
+
+void CopyTestOscData(char *dstFileName)
+{
+	if (fatState != FatStateReady)
+	{
+		return;
+	}
+	unsigned int fileNumber = 0;
+	
+	char srcFileName[20];
+	snprintf(srcFileName, sizeof(srcFileName), "/oscCache/%u", fileNumber);
+	
+	FL_FILE *srcFile = (FL_FILE*)fl_fopen(srcFileName, "r");
+	FL_FILE *dstFile = (FL_FILE*)fl_fopen(dstFileName, "rw");
+	if (!srcFile || !dstFile)
+	{
+		return;
+	}
+	
+	bool result = true;
+	
+	
+	int copyCount = 14 * 200 * 30;
+	unsigned int startOffset = 14 * 5000;
+	int i = 0;
+	while (i < copyCount)
+	{
+		int portionSize = copyCount - i;
+		if (portionSize > sizeof(_oscDataCopyBuffer))
+		{
+			portionSize = sizeof(_oscDataCopyBuffer);
+		}
+		result &= fl_fseek(srcFile, startOffset + i, 0) == 0;
+		result &= fl_fread(&_oscDataCopyBuffer, portionSize, 1, srcFile) == portionSize;
+		
+		result &= fl_fseek(dstFile, 0, 2) == 0;
+		result &= fl_fwrite(&_oscDataCopyBuffer, portionSize, 1, dstFile) == portionSize;
+		i += portionSize;
+		
+	}
+	
+	fl_fclose(srcFile);
+	fl_fclose(dstFile);
+}
+
 bool OscFilesRead(const char *fileName, long int offset, int origin, unsigned char *data, unsigned int count)
 {
 	if (fatState != FatStateReady)

@@ -386,6 +386,7 @@ int main()
 	OscCache.DeleteFileCallback = OscCacheDeleteFile;
 	OscCache.WriteFileCallback = OscCacheWriteFile;
 	
+	OscGet::AppendOscDataCallback = CopyTestOscData;
 	OscGet::Init(OscFilesRead, OscFilesWrite);
 	
 	// начали работу
@@ -480,7 +481,7 @@ int main()
 		
 		OscCache.Run();
 		
-		//OscGet::Run();
+		OscGet::Run();
 		/*
 		for (unsigned short i = 0; i < 100; i++)
 		{

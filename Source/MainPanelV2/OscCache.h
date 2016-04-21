@@ -21,7 +21,7 @@ public:
 	
 	static const unsigned int OscRecordSize = oscRecordSize;
 	static const unsigned int OscRequestMaxPortionSize = oscRequestMaxPortionSize;
-	static const unsigned int OscFileSize = 65536 * OscRecordSize;
+	static const unsigned int OscFileSize = 65535 * OscRecordSize;
 	static const unsigned int MaxFileCount = 3;
 	static const unsigned int PortionSize = OscRecordSize * OscRequestMaxPortionSize;
 	static const unsigned int BufferSize = PortionSize * 2;

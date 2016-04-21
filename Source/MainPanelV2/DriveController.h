@@ -222,7 +222,10 @@ public:
 			// если не было события, а сейчас возникло
 			// при инициализации -1, при первом чтении просто перезапишется
 			// если в данный момент есть событие но неизвестно было ли оно до запуска, т.е. в буфере -1, то считаем что оно возникло до запуска и не обрабатываем
-			if (_oscEventPointer[i] == 0xFFFF && currentPtr != 0xFFFF)
+			if (
+				(_oscEventPointer[i] == 0xFFFF && currentPtr != 0xFFFF)// ||
+				//(_oscEventPointer[i] != 0xFFFF && currentPtr != _oscEventPointer[i])
+			   )
 			{
 				// обарбатываем возникновение события
 				OnOscEventCallback(oscType, currentPtr);
@@ -243,7 +246,7 @@ public:
 			bool lastPart = false;
 			if (curPos < _oscLoadedPos)
 			{
-				res = 0xFFFF - _oscLoadedPos + 1;
+				res = 0xFFFF - _oscLoadedPos;
 				lastPart = true;
 			}
 			
@@ -418,7 +421,7 @@ public:
 								
 								_oscLoadedPos += regQuantity;
 								
-								if (_oscLoadedPos >= 65536)
+								if (_oscLoadedPos >= 0xFFFF)
 								{
 									_oscLoadedPos = 0;
 								}
