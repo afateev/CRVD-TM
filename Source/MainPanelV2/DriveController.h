@@ -155,7 +155,7 @@ protected:
     static unsigned int _problemCount;
     
 	static unsigned int _oscLoadedPos;
-	static unsigned int _oscEventPointer[OscTypeCount];
+	static int _oscEventPointer[OscTypeCount];
 	
 	static bool _oscRequestWait;
 	static bool _oscResponseReady;
@@ -222,10 +222,7 @@ public:
 			// если не было события, а сейчас возникло
 			// при инициализации -1, при первом чтении просто перезапишется
 			// если в данный момент есть событие но неизвестно было ли оно до запуска, т.е. в буфере -1, то считаем что оно возникло до запуска и не обрабатываем
-			if (
-				(_oscEventPointer[i] == 0xFFFF && currentPtr != 0xFFFF)// ||
-				//(_oscEventPointer[i] != 0xFFFF && currentPtr != _oscEventPointer[i])
-			   )
+			if (_oscEventPointer[i] > 0 && currentPtr != 0xFFFF && currentPtr != _oscEventPointer[i])
 			{
 				// обарбатываем возникновение события
 				OnOscEventCallback(oscType, currentPtr);
@@ -732,7 +729,7 @@ template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress
 unsigned int DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_oscLoadedPos = 0;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
-unsigned int DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_oscEventPointer[];
+int DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_oscEventPointer[];
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 bool DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_oscRequestWait = false;
