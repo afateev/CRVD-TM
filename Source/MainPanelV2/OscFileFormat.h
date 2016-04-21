@@ -26,6 +26,7 @@ public:
 		char FileName[FileNameSize];
 	};
 	
+#ifdef OSC_V2
 	struct HeaderStruct
 	{
 		unsigned short Version;
@@ -104,6 +105,92 @@ public:
             *dword |= wordlo;
 		}
 	};
+#endif
+
+#ifdef OSC_V3
+	struct HeaderStruct
+	{
+		unsigned short Version;
+		unsigned short Trash;
+		unsigned int Length;
+		unsigned int Center;
+		
+		HeaderStruct()
+		{
+			Version = 0x0300;
+			Trash = 0;
+			Length = 0;
+			Center = 0;
+		}
+	};
+	
+	struct AnalogValuesStruct
+	{
+		float Ust;
+		float Ist;
+		float Urot;
+		float Irot;
+		
+		AnalogValuesStruct()
+		{
+			Ust = 0.0;
+			Ist = 0.0;
+			Urot = 0.0;
+			Irot = 0.0;
+		}
+	};
+	
+	struct DataStruct
+	{
+		unsigned short Ust;
+		unsigned short Ist;
+		unsigned short Urot;
+		unsigned short Irot;
+		unsigned short Phi;
+		unsigned int Discrete;
+		
+		void SwapBytes()
+		{
+			SwapBytes(&Ust);
+			SwapBytes(&Ist);
+			SwapBytes(&Urot);
+			SwapBytes(&Irot);
+			SwapBytes(&Phi);
+            SwapBytes(&Discrete);
+		}
+	protected:
+		void SwapBytes(unsigned short * word)
+		{
+			if (!word)
+			{
+				return;
+			}
+			unsigned short tmp = *word;
+			*word >>= 8;
+			tmp <<= 8;
+			*word |= tmp;
+		}
+        
+        void SwapBytes(unsigned int * dword)
+		{
+			if (!dword)
+			{
+				return;
+			}
+            
+            unsigned short wordlo = *dword & 0xFFFF;
+            unsigned short wordhi = (*dword >> 16) & 0xFFFF;
+            SwapBytes(&wordlo);
+            SwapBytes(&wordhi);
+            
+            *dword = wordhi;
+            *dword <<= 16;
+            *dword |= wordlo;
+		}
+	};
+#endif
+	
+	static const int OscRecordSize = sizeof(DataStruct);
 	
 	static void FormatFileName(char *buffer, unsigned int bufferSize, time_t oscTime, OscType oscType)
 	{

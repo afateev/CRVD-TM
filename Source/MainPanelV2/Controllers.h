@@ -9,6 +9,7 @@
 #include "DriveControllerSwitch.h"
 #include "PortScanner.h"
 #include "DriveEventsGenerator.h"
+#include "OscFileFormat.h"
 #include "../MainPanel/MegaLib/Modbus/ModbusStateMachine.h"
 
 class MainComPort
@@ -16,8 +17,8 @@ class MainComPort
 };
 
 typedef ModBusMasterStateMachine<Drivers::Board::MainComPort, 256> 		ModBusState;
-typedef DriveController<ModBusState, 0x01, 0x02> 	PrimaryController;
-typedef DriveController<ModBusState, 0x02, 0x01> 	ReserveController;
+typedef DriveController<ModBusState, 0x01, 0x02, OscFileFormat::OscRecordSize> 	PrimaryController;
+typedef DriveController<ModBusState, 0x02, 0x01, OscFileFormat::OscRecordSize> 	ReserveController;
 typedef InsulationControl<ModBusState, 0x01> 		InsulationController;
 typedef ControllerDiagnostic<ModBusState, 0x01, 1, 17>	MainControllerDiagnostic;
 typedef ControllerDiagnostic<ModBusState, 0x02, 1, 17>	ReservControllerDiagnostic;

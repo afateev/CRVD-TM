@@ -35,7 +35,7 @@ struct OscRequestInfo
 	}
 };
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 class DriveController
 {
 public:
@@ -97,8 +97,23 @@ public:
         RegRotorCurrentMaxDisplay = 164
 	};
 	
+	enum OscType
+	{
+		OscEngineStart			= 0,
+		OscEngineStop			= 1,
+		OscEngineEvent			= 2,
+		OscChechoutStart		= 3,
+		OscChechoutStop			= 4,
+		// кол-во типов осциллограмм
+		OscTypeCount			= 5,
+	};
+	
+	static const int OscRecordSize = oscRecordSize;
+	static const int OscRequestMaxPortionSize = 250 / OscRecordSize;
+	
 	typedef Rblib::CallbackWrapper<bool &> AllowOscReadCallbackType;
 	typedef Rblib::CallbackWrapper<unsigned int, unsigned char *, int> OnOscReadedCallbackType;
+	typedef Rblib::CallbackWrapper<OscType, unsigned int> OnOscEventCallbackType;
 protected:
 	enum State
 	{
@@ -140,6 +155,7 @@ protected:
     static unsigned int _problemCount;
     
 	static unsigned int _oscLoadedPos;
+	static unsigned int _oscEventPointer[OscTypeCount];
 	
 	static bool _oscRequestWait;
 	static bool _oscResponseReady;
@@ -148,7 +164,74 @@ public:
 	static bool DoOnlyLowerRegsRequest;
 	static AllowOscReadCallbackType AllowOscReadCallback;
 	static OnOscReadedCallbackType OnOscReadedCallback;
+	static OnOscEventCallbackType OnOscEventCallback;
 public:
+	static void Init()
+	{
+		ResetOscEventPointers();
+	}
+	
+	static bool ImActive()
+	{
+		return _address == 1;
+	}
+	
+	static void ResetOscEventPointers()
+	{
+		for (int i = 0; i < OscTypeCount; i++)
+		{
+			_oscEventPointer[i] = -1;
+		}
+	}
+	
+	static void UpdateOscEventPointers()
+	{
+		for (int i = 0; i < OscTypeCount; i++)
+		{
+			OscType oscType = (OscType)i;
+			unsigned short currentPtr = 0xFFFF;
+			switch (oscType)
+			{
+			case OscEngineStart:
+				{
+					currentPtr = GetRegValue(RegOscEngineStart);
+				}
+				break;
+			case OscEngineStop:
+				{
+					currentPtr = GetRegValue(RegOscEngineStop);
+				}
+				break;
+			case OscEngineEvent:
+				{
+					currentPtr = GetRegValue(RegOscEngineEvent);
+				}
+				break;
+			case OscChechoutStart:
+				{
+					currentPtr = GetRegValue(RegOscChechoutStart);
+				}
+				break;
+			case OscChechoutStop:
+				{
+					currentPtr = GetRegValue(RegOscChechoutStop);
+				}
+				break;
+			}
+			
+			// если не было события, а сейчас возникло
+			// при инициализации -1, при первом чтении просто перезапишется
+			// если в данный момент есть событие но неизвестно было ли оно до запуска, т.е. в буфере -1, то считаем что оно возникло до запуска и не обрабатываем
+			if (_oscEventPointer[i] == 0xFFFF && currentPtr != 0xFFFF)
+			{
+				// обарбатываем возникновение события
+				OnOscEventCallback(oscType, currentPtr);
+			}
+			
+			_oscEventPointer[i] = currentPtr;
+		}
+	}
+	
 	static int GetOscLoadCount()
 	{
 		int res = 0;
@@ -164,12 +247,12 @@ public:
 				lastPart = true;
 			}
 			
-			if (res > 20)
+			if (res > OscRequestMaxPortionSize)
 			{
-				res = 20;
+				res = OscRequestMaxPortionSize;
 			}
 			
-			if (res < 20 && !lastPart)
+			if (res < OscRequestMaxPortionSize && !lastPart)
 			{
 				res = 0;
 			}
@@ -191,7 +274,7 @@ public:
 					if (_regRequestCount > 0)
 					{
 						// осциллограмму вычитываем только из активного регулятора, а он имеет всегда адрес №1
-						if (_address == 1)
+						if (ImActive())
 						{
 							int loadCount = GetOscLoadCount();
 							
@@ -213,7 +296,7 @@ public:
 						}
 						else
 						{
-							// сбросить _oscLoadedPos не текущую позицию чтобы при активации начать качать с нее
+							// сбросить _oscLoadedPos на текущую позицию чтобы при активации начать качать с нее
 							if (HasRegValue(RegOscCurPos))
 							{
 								unsigned int curPos = GetRegValue(RegOscCurPos);
@@ -314,17 +397,24 @@ public:
 								
 								regPtr += 2;
 							}
+							
+							if (ImActive())
+							{
+								// если получены свежие данные об указателях осциллограмм
+								if (firstReg <= RegOscEngineStart && firstReg + regQuantity >= RegOscChechoutStop)
+								{
+									UpdateOscEventPointers();
+								}
+							}
 						}
-						
-						unsigned int oscSize = 12;
 						
 						if (_response[1] == 0x66)
 						{
 							_oscRequestWait = false;
 							
-							if (oscSize * regQuantity == _response[2])
+							if (OscRecordSize * regQuantity == _response[2])
 							{
-								OnOscReadedCallback(_oscLoadedPos * oscSize, &_response[3], oscSize * regQuantity);
+								OnOscReadedCallback(_oscLoadedPos * OscRecordSize, &_response[3], OscRecordSize * regQuantity);
 								
 								_oscLoadedPos += regQuantity;
 								
@@ -544,10 +634,10 @@ public:
 		_oscRequest.StartPoint = StartPoint;
 		
 		unsigned int count = PointsCount;
-		// в поле данных влезет не более (250 / 12) записей
-		if (count > 20)
+		// в поле данных влезет не более (250 / OscRecordSize) записей
+		if (count > OscRequestMaxPortionSize)
 		{
-			count = 20;
+			count = OscRequestMaxPortionSize;
 		}
 		unsigned int end = StartPoint + count;
 		if (end > 0xFFFF)
@@ -578,31 +668,34 @@ public:
 	}
 };
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-DriveController<ModBus, MainAddres, AdditionalAddress>::AllowOscReadCallbackType DriveController<ModBus, MainAddres, AdditionalAddress>::AllowOscReadCallback;
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::AllowOscReadCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::AllowOscReadCallback;
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-DriveController<ModBus, MainAddres, AdditionalAddress>::OnOscReadedCallbackType DriveController<ModBus, MainAddres, AdditionalAddress>::OnOscReadedCallback;
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscReadedCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscReadedCallback;
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-typename DriveController<ModBus, MainAddres, AdditionalAddress>::State
-DriveController<ModBus, MainAddres, AdditionalAddress>::_state = 
-DriveController<ModBus, MainAddres, AdditionalAddress>::StateRequest;
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscEventCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscEventCallback;
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-unsigned char DriveController<ModBus, MainAddres, AdditionalAddress>::_request[256];
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+typename DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::State
+DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_state = 
+DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::StateRequest;
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-unsigned char *DriveController<ModBus, MainAddres, AdditionalAddress>::_response;
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+unsigned char DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_request[256];
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-unsigned char DriveController<ModBus, MainAddres, AdditionalAddress>::_address = MainAddres;
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+unsigned char *DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_response;
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-unsigned short DriveController<ModBus, MainAddres, AdditionalAddress>::_registers[256];
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+unsigned char DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_address = MainAddres;
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-unsigned short DriveController<ModBus, MainAddres, AdditionalAddress>::_editedRegisters[256];
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+unsigned short DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_registers[256];
+
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+unsigned short DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_editedRegisters[256];
 /*
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
 bool DriveController<ModBus, MainAddres, AdditionalAddress>::_hasReg[256];
@@ -611,40 +704,43 @@ template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress
 bool DriveController<ModBus, MainAddres, AdditionalAddress>::_editReg[256];
 */
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-DriveController<ModBus, MainAddres, AdditionalAddress>::RegFlags DriveController<ModBus, MainAddres, AdditionalAddress>::_regState[256];
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::RegFlags DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_regState[256];
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-unsigned char DriveController<ModBus, MainAddres, AdditionalAddress>::_currentRequest = 0;
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+unsigned char DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_currentRequest = 0;
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-unsigned char DriveController<ModBus, MainAddres, AdditionalAddress>::_regRequestCount = 0;
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+unsigned char DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_regRequestCount = 0;
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-const RequestInfo DriveController<ModBus, MainAddres, AdditionalAddress>::requests[2] = {RequestInfo(1, 14), RequestInfo(100, 65)};
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+const RequestInfo DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::requests[2] = {RequestInfo(1, 14), RequestInfo(100, 65)};
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-bool DriveController<ModBus, MainAddres, AdditionalAddress>::_writeReg97 = false;
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+bool DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_writeReg97 = false;
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-bool DriveController<ModBus, MainAddres, AdditionalAddress>::_readOneShot = false;
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+bool DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_readOneShot = false;
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-unsigned int DriveController<ModBus, MainAddres, AdditionalAddress>::_problemCount = 0;
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+unsigned int DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_problemCount = 0;
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-unsigned int DriveController<ModBus, MainAddres, AdditionalAddress>::_oscLoadedPos = 0;
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+unsigned int DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_oscLoadedPos = 0;
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-bool DriveController<ModBus, MainAddres, AdditionalAddress>::_oscRequestWait = false;
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+unsigned int DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_oscEventPointer[];
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-bool DriveController<ModBus, MainAddres, AdditionalAddress>::_oscResponseReady = false;
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+bool DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_oscRequestWait = false;
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-OscRequestInfo DriveController<ModBus, MainAddres, AdditionalAddress>::_oscRequest = OscRequestInfo(0, 0, 0);
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+bool DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_oscResponseReady = false;
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-bool DriveController<ModBus, MainAddres, AdditionalAddress>::DoOnlyLowerRegsRequest = false;
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+OscRequestInfo DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_oscRequest = OscRequestInfo(0, 0, 0);
+
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+bool DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::DoOnlyLowerRegsRequest = false;
 
 #endif

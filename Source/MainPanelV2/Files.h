@@ -172,13 +172,13 @@ void OscCacheCreateFile(unsigned int fileNumber, unsigned int oscFileSize, bool 
 	}
 	
 	char fileName[20];
-	snprintf(fileName, sizeof(fileName), "/osc/cache/%u", fileNumber);
+	snprintf(fileName, sizeof(fileName), "/oscCache/%u", fileNumber);
 	
 	FL_FILE *file = (FL_FILE*)fl_fopen(fileName, "rw");
 	
 	if (!file)
 	{
-		fl_createdirectory("/osc/cache/");
+		fl_createdirectory("/oscCache/");
 		
 		file = (FL_FILE*)fl_fopen(fileName, "rw");
 	}
@@ -193,6 +193,42 @@ void OscCacheCreateFile(unsigned int fileNumber, unsigned int oscFileSize, bool 
 	// записываем мусор
 	unsigned char data = 0;
 	result &= fl_fwrite(&data, oscFileSize, 1, file) == oscFileSize;
+
+	fl_fclose(file);
+}
+
+void OscCacheDeleteFile(unsigned int fileNumber, bool &result)
+{
+	if (fatState != FatStateReady)
+	{
+		return;
+	}
+	
+	char fileName[20];
+	snprintf(fileName, sizeof(fileName), "/oscCache/%u", fileNumber);
+	
+	result &= fl_remove(fileName) == 0;
+}
+
+void OscCacheWriteFile(unsigned int fileNumber, unsigned int offset, unsigned char *data, unsigned int count, bool &result)
+{
+	if (fatState != FatStateReady)
+	{
+		return;
+	}
+	
+	char fileName[20];
+	snprintf(fileName, sizeof(fileName), "/oscCache/%u", fileNumber);
+	
+	FL_FILE *file = (FL_FILE*)fl_fopen(fileName, "rw");
+	if (!file)
+	{
+		return;
+	}
+	
+	result = true;
+	result &= fl_fseek(file, offset, 0) == 0;
+	result &= fl_fwrite(&data, count, 1, file) == count;
 
 	fl_fclose(file);
 }

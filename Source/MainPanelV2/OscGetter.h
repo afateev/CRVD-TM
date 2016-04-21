@@ -109,7 +109,18 @@ public:
 		ActiveDriveControllerParams::SetDoOnlyLowerRegsRequest(false);
 	}
 	
+	static void OnOscEvent(OscFileFormat::OscType oscType, unsigned int pointer)
+	{
+	}
+	
 	static bool Run()
+	{
+		
+		
+		return true;
+	}
+	
+	static bool Run1()
 	{
 		TestActiveController();
 		

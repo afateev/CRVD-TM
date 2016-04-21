@@ -2,6 +2,11 @@
 #ifndef OSCCACHE_H
 #define OSCCACHE_H
 
+template
+	<
+		int oscRecordSize,
+		int oscRequestMaxPortionSize
+	>
 class OscCacheImplementer
 {
 public:
@@ -14,10 +19,11 @@ public:
 		StateNextFile
 	};
 	
-	static const unsigned int OscRecordSize = 12;
+	static const unsigned int OscRecordSize = oscRecordSize;
+	static const unsigned int OscRequestMaxPortionSize = oscRequestMaxPortionSize;
 	static const unsigned int OscFileSize = 65536 * OscRecordSize;
 	static const unsigned int MaxFileCount = 3;
-	static const unsigned int PortionSize = 12 * 20;
+	static const unsigned int PortionSize = OscRecordSize * OscRequestMaxPortionSize;
 	static const unsigned int BufferSize = PortionSize * 2;
 	
 	typedef Rblib::CallbackWrapper<bool &> FileSystemReadyCallbackType;

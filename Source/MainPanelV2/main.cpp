@@ -15,7 +15,7 @@ typedef KeyboardScanner<Drivers::Board::Gpio::D, 4, 3, 2, 1, 15, 14, 13, 12> key
 
 SideIndicators<Drivers::StatorDisplay, Drivers::RotorDisplay, ActiveDriveControllerParams> StatorRotorIndicators;
 
-typedef OscCacheImplementer OscCacheType;
+typedef OscCacheImplementer<PrimaryController::OscRecordSize, PrimaryController::OscRequestMaxPortionSize> OscCacheType;
 
 OscCacheType OscCache;
 
@@ -255,6 +255,74 @@ int putchar(int c)
   return c;
 }
 
+void OnPrimaryOscEvent(PrimaryController::OscType oscType, unsigned int pointer)
+{
+	OscFileFormat::OscType t;
+	switch(oscType)
+	{
+	case PrimaryController::OscEngineStart:
+		{
+			t = OscFileFormat::OscTypeEngineStart;
+		}
+		break;
+	case PrimaryController::OscEngineStop:
+		{
+			t = OscFileFormat::OscTypeEngineStop;
+		}
+		break;
+	case PrimaryController::OscEngineEvent:
+		{
+			t = OscFileFormat::OscTypeEngineEvent;
+		}
+		break;
+	case PrimaryController::OscChechoutStart:
+		{
+			t = OscFileFormat::OscTypeCheckoutStart;
+		}
+		break;
+	case PrimaryController::OscChechoutStop:
+		{
+			t = OscFileFormat::OscTypeCheckoutStop;
+		}
+		break;
+	}
+	OscGet::OnOscEvent(t, pointer);
+}
+
+void OnReserveOscEvent(ReserveController::OscType oscType, unsigned int pointer)
+{
+	OscFileFormat::OscType t;
+	switch(oscType)
+	{
+	case ReserveController::OscEngineStart:
+		{
+			t = OscFileFormat::OscTypeEngineStart;
+		}
+		break;
+	case ReserveController::OscEngineStop:
+		{
+			t = OscFileFormat::OscTypeEngineStop;
+		}
+		break;
+	case ReserveController::OscEngineEvent:
+		{
+			t = OscFileFormat::OscTypeEngineEvent;
+		}
+		break;
+	case ReserveController::OscChechoutStart:
+		{
+			t = OscFileFormat::OscTypeCheckoutStart;
+		}
+		break;
+	case ReserveController::OscChechoutStop:
+		{
+			t = OscFileFormat::OscTypeCheckoutStop;
+		}
+		break;
+	}
+	OscGet::OnOscEvent(t, pointer);
+}
+
 int main()
 {
 	Drivers::Init();
@@ -266,6 +334,13 @@ int main()
 	
 	PrimaryController::AllowOscReadCallback.Set(OscCacheType::AllowRead, &OscCache);
 	PrimaryController::OnOscReadedCallback.Set(OscCacheType::StoreOscPart, &OscCache);
+	PrimaryController::OnOscEventCallback = OnPrimaryOscEvent;
+	PrimaryController::Init();
+	
+	ReserveController::AllowOscReadCallback.Set(OscCacheType::AllowRead, &OscCache);
+	ReserveController::OnOscReadedCallback.Set(OscCacheType::StoreOscPart, &OscCache);
+	ReserveController::OnOscEventCallback = OnReserveOscEvent;
+	ReserveController::Init();
 	
 	MainControllerDiagnostic::TxEnableCallback = Drivers::Board::DiagnosticRs485TxEnable;
 	ReservControllerDiagnostic::TxEnableCallback = Drivers::Board::DiagnosticRs485TxEnable;
@@ -308,6 +383,8 @@ int main()
 	
 	OscCache.FileSystemReadyCallback = FileSystemReady;
 	OscCache.CreateFileCallback = OscCacheCreateFile;
+	OscCache.DeleteFileCallback = OscCacheDeleteFile;
+	OscCache.WriteFileCallback = OscCacheWriteFile;
 	
 	OscGet::Init(OscFilesRead, OscFilesWrite);
 	
