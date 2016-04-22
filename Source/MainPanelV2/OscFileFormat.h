@@ -16,7 +16,9 @@ public:
 		OscTypeEngineStop,
 		OscTypeEngineEvent,
 		OscTypeCheckoutStart,
-		OscTypeCheckoutStop
+		OscTypeCheckoutStop,
+		
+		OscTypeCount,
 	};
 	
 	static const unsigned short FramesPerSec = 200;

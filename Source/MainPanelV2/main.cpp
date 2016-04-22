@@ -386,7 +386,9 @@ int main()
 	OscCache.DeleteFileCallback = OscCacheDeleteFile;
 	OscCache.WriteFileCallback = OscCacheWriteFile;
 	
-	OscGet::AppendOscDataCallback = CopyTestOscData;
+	OscGet::GetOscCacheFileNumber.Set(OscCacheType::GetCurrentFileNumber, &OscCache);
+	OscGet::IsDataLoadedCallback.Set(OscCacheType::IsDataLoaded, &OscCache);
+	OscGet::AppendOscDataCallback = CopyOscData;
 	OscGet::Init(OscFilesRead, OscFilesWrite);
 	
 	// начали работу

@@ -235,48 +235,89 @@ void OscCacheWriteFile(unsigned int fileNumber, unsigned int offset, unsigned ch
 
 unsigned char _oscDataCopyBuffer[200];
 
-void CopyTestOscData(char *dstFileName)
+void CopyOscData(char *dstFileName, unsigned int fileNumber, int startPos, int endPos)
 {
 	if (fatState != FatStateReady)
 	{
 		return;
 	}
-	unsigned int fileNumber = 0;
+
+	int partStart[2] = {0, 0};
+	int partCount[2] = {0, 0};
+	int partFileNumber[2] = {0, 0};
 	
-	char srcFileName[20];
-	snprintf(srcFileName, sizeof(srcFileName), "/oscCache/%u", fileNumber);
-	
-	FL_FILE *srcFile = (FL_FILE*)fl_fopen(srcFileName, "r");
-	FL_FILE *dstFile = (FL_FILE*)fl_fopen(dstFileName, "rw");
-	if (!srcFile || !dstFile)
+	if (startPos < 0 && endPos < 0xFFFF)
 	{
-		return;
+		partCount[0] = -startPos;
+		partStart[0] = 0xFFFF - partCount[0];
+		partFileNumber[0] = fileNumber - 1;
+		partStart[1] = 0;
+		partCount[1] = endPos;
+		partFileNumber[1] = fileNumber;
 	}
 	
-	bool result = true;
-	
-	
-	int copyCount = 14 * 200 * 30;
-	unsigned int startOffset = 14 * 5000;
-	int i = 0;
-	while (i < copyCount)
+	if (startPos >= 0 && endPos > 0xFFFF)
 	{
-		int portionSize = copyCount - i;
-		if (portionSize > sizeof(_oscDataCopyBuffer))
+		partStart[0] = startPos;
+		partCount[0] = 0xFFFF - partStart[0];
+		partFileNumber[0] = fileNumber;
+		partStart[1] = 0;
+		partCount[1] = endPos - 0xFFFF;
+		partFileNumber[1] = fileNumber + 1;
+	}
+	
+	if (startPos >= 0 && endPos < 0xFFFF)
+	{
+		partStart[0] = startPos;
+		partCount[0] = endPos - startPos;
+		partFileNumber[0] = fileNumber;
+	}
+	
+	for (int p = 0; p < 1; p++)
+	{
+	
+		partStart[p] *= OscFileFormat::OscRecordSize;
+		partCount[p] *= OscFileFormat::OscRecordSize;
+		
+		if (partCount[p] <= 0)
 		{
-			portionSize = sizeof(_oscDataCopyBuffer);
+			continue;
 		}
-		result &= fl_fseek(srcFile, startOffset + i, 0) == 0;
-		result &= fl_fread(&_oscDataCopyBuffer, portionSize, 1, srcFile) == portionSize;
 		
-		result &= fl_fseek(dstFile, 0, 2) == 0;
-		result &= fl_fwrite(&_oscDataCopyBuffer, portionSize, 1, dstFile) == portionSize;
-		i += portionSize;
+		char srcFileName[20];
+		snprintf(srcFileName, sizeof(srcFileName), "/oscCache/%u", partFileNumber[p]);
 		
+		FL_FILE *srcFile = (FL_FILE*)fl_fopen(srcFileName, "r");
+		FL_FILE *dstFile = (FL_FILE*)fl_fopen(dstFileName, "rw");
+		if (!srcFile || !dstFile)
+		{
+			return;
+		}
+		
+		bool result = true;
+		
+		int copyCount = partCount[p];
+		unsigned int startOffset = partStart[p];
+		int i = 0;
+		while (i < copyCount)
+		{
+			int portionSize = copyCount - i;
+			if (portionSize > sizeof(_oscDataCopyBuffer))
+			{
+				portionSize = sizeof(_oscDataCopyBuffer);
+			}
+			result &= fl_fseek(srcFile, startOffset + i, 0) == 0;
+			result &= fl_fread(&_oscDataCopyBuffer, portionSize, 1, srcFile) == portionSize;
+			
+			result &= fl_fseek(dstFile, 0, 2) == 0;
+			result &= fl_fwrite(&_oscDataCopyBuffer, portionSize, 1, dstFile) == portionSize;
+			i += portionSize;
+			
+		}
+		
+		fl_fclose(srcFile);
+		fl_fclose(dstFile);
 	}
-	
-	fl_fclose(srcFile);
-	fl_fclose(dstFile);
 }
 
 bool OscFilesRead(const char *fileName, long int offset, int origin, unsigned char *data, unsigned int count)

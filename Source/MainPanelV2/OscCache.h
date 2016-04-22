@@ -21,7 +21,8 @@ public:
 	
 	static const unsigned int OscRecordSize = oscRecordSize;
 	static const unsigned int OscRequestMaxPortionSize = oscRequestMaxPortionSize;
-	static const unsigned int OscFileSize = 65535 * OscRecordSize;
+	static const unsigned int OscBufferMaxPointsCount = 65535;
+	static const unsigned int OscFileSize = OscBufferMaxPointsCount * OscRecordSize;
 	static const unsigned int MaxFileCount = 3;
 	static const unsigned int PortionSize = OscRecordSize * OscRequestMaxPortionSize;
 	static const unsigned int BufferSize = PortionSize * 2;
@@ -104,6 +105,51 @@ public:
 		}
 		
 		im->StoreOscPart(offset, data, dataCount);
+	}
+	
+	unsigned int GetCurrentFileNumber()
+	{
+		return _fileNumber;
+	}
+	
+	static void GetCurrentFileNumber(void *callbackParam, unsigned int &fileNumber)
+	{
+		OscCacheImplementer *im = (OscCacheImplementer *)callbackParam;
+		
+		if (!im)
+		{
+			return;
+		}
+		
+		fileNumber = im->GetCurrentFileNumber();
+	}
+	
+	bool IsDataLoaded(unsigned int fileNumber, int pos)
+	{
+		if (pos < 0)
+		{
+			return true;
+		}
+		
+		if (pos > OscBufferMaxPointsCount)
+		{
+			pos -= OscBufferMaxPointsCount;
+			fileNumber++;
+		}
+		
+		return GetCurrentFileNumber() >= fileNumber && ((_currentOffset + _bufferPos) >= (pos * OscRecordSize));
+	}
+	
+	static void IsDataLoaded(void *callbackParam, unsigned int fileNumber, int pos, bool &loaded)
+	{
+		OscCacheImplementer *im = (OscCacheImplementer *)callbackParam;
+		
+		if (!im)
+		{
+			return;
+		}
+		
+		loaded = im->IsDataLoaded(fileNumber, pos);
 	}
 	
 	void Run()

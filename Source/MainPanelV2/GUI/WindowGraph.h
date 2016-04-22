@@ -912,7 +912,12 @@ public:
 			if (res)
 			{
 				res = fl_fread(&_header, sizeof(_header), 1, oscFile) == sizeof(_header);
+#ifdef OSC_V2
 				res &= _header.Version == 0x0200;
+#endif
+#ifdef OSC_V3
+				res &= _header.Version == 0x0300;
+#endif
 			}
 			
 			if (res)

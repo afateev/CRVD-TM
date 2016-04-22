@@ -59,7 +59,9 @@ public:
 		char LastFileName[50];
 	};
 	
-	typedef Rblib::CallbackWrapper<char *> AppendOscDataCallbackType;
+	typedef Rblib::CallbackWrapper<unsigned int &> GetOscCacheFileNumberType;
+	typedef Rblib::CallbackWrapper<unsigned int, int, bool &> IsDataLoadedCallbackType;
+	typedef Rblib::CallbackWrapper<char *, unsigned int, int, int> AppendOscDataCallbackType;
 protected:	
 	static OscCaptureInfo _osc;
 	
@@ -67,11 +69,31 @@ protected:
 	static FileCallback *_readFile;
 	static FileCallback *_writeFile;
 	
-	static bool _saveOsc;
+	struct OscEventInfo
+	{
+	public:
+		unsigned int FileNumber;
+		int Pointer;
+	public:
+		OscEventInfo()
+		{
+			Reset();
+		}
+		
+		void Reset()
+		{
+			FileNumber = 0;
+			Pointer = -1;
+		}
+	};
+	
+	static OscEventInfo _oscEventPending[OscFileFormat::OscTypeCount];
 public:
 	static OscFileFormat::OscFileDescription _oscCache[CacheSize];
 	static unsigned long _oscCountInCache;
 	static unsigned long _newOscCount;
+	static GetOscCacheFileNumberType GetOscCacheFileNumber;
+	static IsDataLoadedCallbackType IsDataLoadedCallback;
 	static AppendOscDataCallbackType AppendOscDataCallback;
 public:
 	static void Init(FileCallback *read, FileCallback *write)
@@ -79,7 +101,10 @@ public:
 		_readFile = read;
 		_writeFile = write;
 		
-		_saveOsc = false;
+		for (int i = 0; i < OscFileFormat::OscTypeCount; i++)
+		{
+			_oscEventPending[i].Reset();
+		}
 		
 		Reset(false);
 	}
@@ -118,53 +143,106 @@ public:
 	
 	static void OnOscEvent(OscFileFormat::OscType oscType, unsigned int pointer)
 	{
-		switch (oscType)
-		{
-		case OscFileFormat::OscTypeEngineStop:
-			{
-				_saveOsc = true;
-			}
-			break;
-		}
+		_oscEventPending[oscType].Pointer = pointer;
+		GetOscCacheFileNumber(_oscEventPending[oscType].FileNumber);
 	}
 	
 	static bool Run()
 	{
-		if (_saveOsc)
+		for (int i = 0; i < OscFileFormat::OscTypeCount; i++)
 		{
-			_saveOsc = false;
+			OscFileFormat::OscType oscType = (OscFileFormat::OscType)i;
+			unsigned int fileNumber = _oscEventPending[i].FileNumber;
+			int pointer = _oscEventPending[i].Pointer;
 			
-			OscFileFormat::HeaderStruct hdr;
-			hdr.Length = 30 * FramesPerSec;		
-			hdr.Center = 25 * FramesPerSec;		
-			
-			char fileName[50];
-			OscFileFormat::FormatFileName(fileName, sizeof(fileName), Rtc::GetTime(), OscFileFormat::OscTypeEngineStop);
-					
-			bool res = _writeFile(fileName, 0, 0, (unsigned char *)&hdr, sizeof(OscFileFormat::HeaderStruct));
-			
-			if (res)
+			// преоритет событий по списку в перечислении
+			if (pointer >= 0)
 			{
-				OscFileFormat::AnalogValuesStruct analogValues;
-				analogValues.Ust = ActiveDriveControllerParams::GetRegValue(ActiveDriveControllerParams::RegStatorVoltageMaxDisplay);
-				analogValues.Ist = ActiveDriveControllerParams::GetRegValue(ActiveDriveControllerParams::RegStatorCurrentMaxDisplay);
-				analogValues.Urot = ActiveDriveControllerParams::GetRegValue(ActiveDriveControllerParams::RegRotorVoltageMaxDisplay);
-				analogValues.Irot = ActiveDriveControllerParams::GetRegValue(ActiveDriveControllerParams::RegRotorCurrentMaxDisplay);
+				int centerPos =  pointer;
+				int startPos = 0;
+				int endPos = 0;
 				
-				res = _writeFile(fileName, sizeof(OscFileFormat::HeaderStruct), 0, (unsigned char *)&analogValues, sizeof(OscFileFormat::AnalogValuesStruct));
-				
-				if (res)
+				switch (oscType)
 				{
-					_osc.FileHeaderCreated = true;
+				case OscFileFormat::OscTypeEngineStart:
+				case OscFileFormat::OscTypeCheckoutStart:
+					{
+						startPos = centerPos - 5 * FramesPerSec;
+						endPos = centerPos + 25 * FramesPerSec;
+					}
+					break;
+				case OscFileFormat::OscTypeEngineStop:
+				case OscFileFormat::OscTypeCheckoutStop:
+					{
+						startPos = centerPos - 25 * FramesPerSec;
+						endPos = centerPos + 5 * FramesPerSec;
+					}
+					break;
+				case OscFileFormat::OscTypeEngineEvent:
+					{
+						startPos = centerPos - 15 * FramesPerSec;
+						endPos = centerPos + 15 * FramesPerSec;
+					}
+					break;
 				}
-			}
 			
-			if (res)
-			{
-				AppendOscDataCallback(fileName);
+				bool dataLoaded = false;
+				IsDataLoadedCallback(fileNumber, endPos, dataLoaded);
+				
+				if (dataLoaded)
+				{
+					// сейчас сохраним, флаг можно снимать
+					_oscEventPending[i].Reset();
+					
+					OscFileFormat::HeaderStruct hdr;
+					hdr.Length = MarkersDelta(startPos, endPos);
+					hdr.Center = MarkersDelta(startPos, centerPos);
+					
+					if (hdr.Length > 0)
+					{
+						time_t centerTime = Rtc::GetTime();
+						// скорректируем реальное время центра
+						unsigned short curOscPos = ActiveDriveControllerParams::GetOscCurPos();
+						unsigned short elapsed = MarkersDelta(centerPos, curOscPos);
+						elapsed /= FramesPerSec;
+							
+						if (centerTime > elapsed)
+						{
+							centerTime -= elapsed;
+						}
+						
+						char fileName[50];
+						OscFileFormat::FormatFileName(fileName, sizeof(fileName), centerTime, oscType);
+								
+						bool res = _writeFile(fileName, 0, 0, (unsigned char *)&hdr, sizeof(OscFileFormat::HeaderStruct));
+						
+						if (res)
+						{
+							OscFileFormat::AnalogValuesStruct analogValues;
+							analogValues.Ust = ActiveDriveControllerParams::GetRegValue(ActiveDriveControllerParams::RegStatorVoltageMaxDisplay);
+							analogValues.Ist = ActiveDriveControllerParams::GetRegValue(ActiveDriveControllerParams::RegStatorCurrentMaxDisplay);
+							analogValues.Urot = ActiveDriveControllerParams::GetRegValue(ActiveDriveControllerParams::RegRotorVoltageMaxDisplay);
+							analogValues.Irot = ActiveDriveControllerParams::GetRegValue(ActiveDriveControllerParams::RegRotorCurrentMaxDisplay);
+							
+							res = _writeFile(fileName, sizeof(OscFileFormat::HeaderStruct), 0, (unsigned char *)&analogValues, sizeof(OscFileFormat::AnalogValuesStruct));
+							
+							if (res)
+							{
+								_osc.FileHeaderCreated = true;
+							}
+						}
+						
+						if (res)
+						{
+							AppendOscDataCallback(fileName, fileNumber, startPos, endPos);
+						}
+					}
+				}
+				
+				break;
 			}
 		}
-		
+
 		return true;
 	}
 	
@@ -756,9 +834,14 @@ unsigned long OscGetter<ActiveDriveControllerParams, CacheSize>::_oscCountInCach
 template<class ActiveDriveControllerParams, unsigned int CacheSize>
 unsigned long OscGetter<ActiveDriveControllerParams, CacheSize>::_newOscCount = 0;
 
+template<class ActiveDriveControllerParams, unsigned int CacheSize>
+OscGetter<ActiveDriveControllerParams, CacheSize>::OscEventInfo OscGetter<ActiveDriveControllerParams, CacheSize>::_oscEventPending[];
 
 template<class ActiveDriveControllerParams, unsigned int CacheSize>
-bool OscGetter<ActiveDriveControllerParams, CacheSize>::_saveOsc = false;
+OscGetter<ActiveDriveControllerParams, CacheSize>::GetOscCacheFileNumberType OscGetter<ActiveDriveControllerParams, CacheSize>::GetOscCacheFileNumber;
+
+template<class ActiveDriveControllerParams, unsigned int CacheSize>
+OscGetter<ActiveDriveControllerParams, CacheSize>::IsDataLoadedCallbackType OscGetter<ActiveDriveControllerParams, CacheSize>::IsDataLoadedCallback;
 
 template<class ActiveDriveControllerParams, unsigned int CacheSize>
 OscGetter<ActiveDriveControllerParams, CacheSize>::AppendOscDataCallbackType OscGetter<ActiveDriveControllerParams, CacheSize>::AppendOscDataCallback;
