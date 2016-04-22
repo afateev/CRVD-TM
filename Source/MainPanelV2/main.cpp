@@ -482,6 +482,7 @@ int main()
 		OscCache.Run();
 		
 		OscGet::Run();
+		wndGraph.Run();
 		/*
 		for (unsigned short i = 0; i < 100; i++)
 		{

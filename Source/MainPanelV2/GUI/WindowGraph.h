@@ -1080,6 +1080,16 @@ public:
 template<class DisplayType, DisplayType &display, class DrawContext, DrawContext* drawContext>
 class WindowGraph : public Window<DisplayType, display>
 {
+public:
+	typedef Window<DisplayType, display> Base;
+	
+	enum State
+	{
+		StateClosed,
+		StateInit,
+		StateIdle,
+		StateUpdateData,
+	};
 protected:
 	typedef Graph<DisplayType, display> GraphType;
 	GraphType _graph;
@@ -1090,6 +1100,9 @@ protected:
 	unsigned char _zoom;
 	unsigned char _maxZoom;
 	int _center;
+	State _state;
+	bool _updateDataRequestPending;
+	int _updateDataRequestHorScroll;
 	
 	unsigned char source1Id;
 	unsigned char source2Id;
@@ -1112,6 +1125,9 @@ public:
 		_maxZoom = 32;
 		_zoom = _maxZoom;
 		_center = 0;
+		_state = StateClosed;
+		_updateDataRequestPending = false;
+		_updateDataRequestHorScroll = 0;
 	}
 	
 	virtual void Draw()
@@ -1174,19 +1190,21 @@ public:
 			drawContext->SecondBufferEnable(true);
 		}
 		
-		int strLen = 0;
-		if (OscFileName != 0)
-		{
-			strLen = strlen(OscFileName);
-		}
 		source1Id = OscSource::SourceCodeUst;
 		source2Id = OscSource::SourceCodeUrot;
 		source3Id = OscSource::SourceCodeEngineRun;
-		_oscSource.Init(OscFileName, strLen);
 		_graph.CaptionStr = OscFileName;
 		_zoom = _maxZoom;
 		_center = 0;
 		UpdateData(0);
+		_state = StateInit;
+	}
+	
+	virtual void Close()
+	{
+		Base::Close();
+		
+		_state = StateClosed;
 	}
 	
 	virtual bool OnKeyDown(char &key)
@@ -1248,6 +1266,47 @@ public:
 		return false;
 	}
 	
+	void Run()
+	{
+		switch (_state)
+		{
+		case StateClosed:
+			{
+				_updateDataRequestPending = false;
+			}
+			break;
+		case StateInit:
+			{
+				if (OscFileName != 0)
+				{
+					int strLen = 0;
+					strLen = strlen(OscFileName);
+					_oscSource.Init(OscFileName, strLen);
+					_state = StateIdle;
+				}
+				else
+				{
+					_state = StateClosed;
+				}
+			}
+			break;
+		case StateIdle:
+			{
+				if (_updateDataRequestPending)
+				{
+					int horScroll = _updateDataRequestHorScroll;
+					_updateDataRequestPending = false;
+					ProcessUpdateDataRequest(horScroll);
+				}
+			}
+			break;
+		case StateUpdateData:
+			{
+			}
+			break;
+		}
+	}
+	
 	void OnZoomIn()
 	{
 		if (_zoom >= 2)
@@ -1284,6 +1343,14 @@ public:
 	
 	void UpdateData(short horScroll)
 	{
+		_updateDataRequestHorScroll = horScroll;
+		_updateDataRequestPending = true;
+	}
+	
+	void ProcessUpdateDataRequest(short horScroll)
+	{
+		_state = StateUpdateData;
+		
 		typename GraphType::LineType *line1 = _graph.GetLine1();
 		typename GraphType::LineType *line2 = _graph.GetLine2();
 		typename GraphType::LineType *line3 = _graph.GetLine3();
@@ -1527,6 +1594,11 @@ public:
 		}
 				
 		_oscSource.CloseFile();
+		
+		if (_state == StateUpdateData)
+		{
+			_state = StateIdle;
+		}
 	}
 };
 
