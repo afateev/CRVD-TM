@@ -122,7 +122,7 @@ void OnKeyDownCallback(char key)
 
 void GuiTimerTick()
 {
-	Drivers::Board::Gpio::A::ClearBit(8);
+	Drivers::Board::Gpio::B::SetBit(1);
 	
 	if (lastKey)
 	{
@@ -164,7 +164,7 @@ void GuiTimerTick()
 		desctop.Draw();
 	}
 	
-	Drivers::Board::Gpio::A::ClearBit(8);
+	Drivers::Board::Gpio::B::ClearBit(1);
 }
 
 Rblib::Driver::ModbusSlave ModbusSlave;
@@ -416,7 +416,6 @@ int main()
 		}
 		
 		DriveEvets::Run();
-		Events::Run();
 		wndEvents.DoLoPiorityWork();
 		ActiveDriveControllerParams::Run();
 		
@@ -480,10 +479,9 @@ int main()
 			}
 			break;
 		}
-		
 		OscCache.Run();
-		
 		OscGet::Run();
+		wndOscList.DoLoPiorityWork();
 		wndGraph.Run();
 		/*
 		for (unsigned short i = 0; i < 100; i++)

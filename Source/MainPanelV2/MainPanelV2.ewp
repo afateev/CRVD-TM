@@ -148,6 +148,7 @@
           <name>CCDefines</name>
           <state>STM32</state>
           <state>OSC_V3</state>
+          <state>BS</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -515,15 +516,15 @@
         <option>
           <name>OOCOutputFormat</name>
           <version>2</version>
-          <state>2</state>
+          <state>0</state>
         </option>
         <option>
           <name>OCOutputOverride</name>
-          <state>1</state>
+          <state>0</state>
         </option>
         <option>
           <name>OOCOutputFile</name>
-          <state>MainPanelV2.bin</state>
+          <state>5.srec</state>
         </option>
         <option>
           <name>OOCCommandLineProducer</name>
@@ -531,7 +532,7 @@
         </option>
         <option>
           <name>OOCObjCopyEnable</name>
-          <state>1</state>
+          <state>0</state>
         </option>
       </data>
     </settings>

@@ -29,13 +29,25 @@ public:
 	typedef SpiHardwareBase<0x40003C00> _C;
 };
 
-template<class Hardware, class CsPort, unsigned char CsPin, bool CsPolarity, bool SckPolarity>
+template <class Hardware>
+class SpiSemaphore
+{
+public:
+	static volatile bool Busy;
+};
+
+template <class Hardware>
+bool SpiSemaphore<Hardware>::Busy = false;
+
+template<class Hardware, class CsPort, unsigned char CsPin, bool CsPolarity, bool SckPolarity, bool waitSemaphore>
 class SpiWrapper
 {
 public:
+	typedef SpiSemaphore<Hardware> Semaphore;
+public:
 	static void Init()
 	{
-		//Hardware::SetDivider(Hardware::Div8);
+		//Hardware::SetDivider(Hardware::Div32);
 		Hardware::Enable(true, true, SckPolarity);
 		CsPort::SetOutputPin(CsPin);
 		Select(false);
@@ -45,6 +57,16 @@ public:
 	{
 		if (select)
 		{
+			if(waitSemaphore)
+			{
+				while(Semaphore::Busy)
+				{
+					__no_operation();
+				}
+			}
+			
+			Semaphore::Busy = true;
+			
 			if (CsPolarity)
 				CsPort::SetBit(CsPin);
 			else
@@ -56,6 +78,8 @@ public:
 				CsPort::ClearBit(CsPin);
 			else
 				CsPort::SetBit(CsPin);
+			
+			Semaphore::Busy = false;
 		}
 	}
 	

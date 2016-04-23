@@ -109,6 +109,7 @@ void OnWindowClose()
 void OnWindowGraphClose()
 {
 	Drivers::DrawContext.SecondBufferEnable(false);
+	wndGraph.OnClose();
 	desctop.ShowWindow(wndIdOscList);
 }
 

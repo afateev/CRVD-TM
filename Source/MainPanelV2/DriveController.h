@@ -52,6 +52,7 @@ public:
 		RegOscEngineEvent = 12,
 		RegOscChechoutStart = 13,
 		RegOscChechoutStop = 14,
+		RegOscSync = 15,
         // Параметры регулятора
         RegNominalStatorCurrent = 100,
         RegStartStatorCurrent = 102,
@@ -169,6 +170,8 @@ public:
 	static void Init()
 	{
 		ResetOscEventPointers();
+		SetRegValue(RegOscSync, 0);
+		_oscLoadedPos = 0;
 	}
 	
 	static bool ImActive()
@@ -263,6 +266,9 @@ public:
 	
 	static bool Run()
 	{
+		bool allowOscRead = false;
+		AllowOscReadCallback(allowOscRead);
+		
 		switch(_state)
 		{
 		case StateRequest:
@@ -280,8 +286,6 @@ public:
 							
 							if (loadCount)
 							{
-								bool allowOscRead = false;
-								AllowOscReadCallback(allowOscRead);
 								if (allowOscRead)
 								{
 										unsigned int requestSize = ModBusMaster::BuildReadOscPoints(_request, _address, _oscLoadedPos, loadCount);
@@ -297,11 +301,13 @@ public:
 						else
 						{
 							// сбросить _oscLoadedPos на текущую позицию чтобы при активации начать качать с нее
+							/*
 							if (HasRegValue(RegOscCurPos))
 							{
 								unsigned int curPos = GetRegValue(RegOscCurPos);
 								_oscLoadedPos = curPos;
-							}
+							}*/
+							_regRequestCount = 0;
 						}
 					}
 					/*
@@ -337,7 +343,7 @@ public:
 						
 						if (_regRequestCount < 255)
 						{
-							_regRequestCount = 10;
+							_regRequestCount = 4;
 						}
 						
 						_state = StateWait;
@@ -455,16 +461,21 @@ public:
                 if (ModBus::IsReady())
                 {    
                     bool changed = false;
-                    for (unsigned int i = 100; i < 256; i++)
+                    for (unsigned int i = 0; i < 256; i++)
                     {
-                        if (i == 0)
+                        if (i != RegOscSync && i < 100)
+						{
+							continue;
+						}
+						
+						if (i == 0)
                         {
                             _writeReg97 = false;
                         }
                         
                         if (_regState[i].Has && _regState[i].Edited)
                         {
-                            if (_registers[i] != _editedRegisters[i])
+                            if (_registers[i] != _editedRegisters[i] || i == RegOscSync)
                             {
                                 unsigned int requestSize = ModBusMaster::BuildWriteHoldingRegister(_request, _address, i, _editedRegisters[i]);
 					            
@@ -497,7 +508,7 @@ public:
                     {
                         int loadCount = GetOscLoadCount();
 						
-						if (loadCount > 0)
+						if (loadCount > 0 && allowOscRead && ImActive())
 						{
 							_state = StateRequest;
 						}
@@ -714,7 +725,7 @@ template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress
 unsigned char DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_regRequestCount = 0;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
-const RequestInfo DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::requests[2] = {RequestInfo(1, 14), RequestInfo(100, 65)};
+const RequestInfo DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::requests[2] = {RequestInfo(1, 15), RequestInfo(100, 65)};
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 bool DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_writeReg97 = false;

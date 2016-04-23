@@ -1112,6 +1112,8 @@ protected:
 	unsigned char source1Id;
 	unsigned char source2Id;
 	unsigned char source3Id;
+	
+	volatile bool _graphLock;
 public:
 	char *OscFileName;
 public:
@@ -1119,6 +1121,7 @@ public:
 	{
 		dataSource1 = 0;
 		dataLine1 = 0;
+		_graphLock = false;
 		
 		_graph.SetPos(8 * 6, 0, 8 * 39 - 1, 222);
 		
@@ -1137,7 +1140,12 @@ public:
 	
 	virtual void Draw()
 	{
-		_graph.Draw();
+		if (!_graphLock && _state != StateUpdateData && !_updateDataRequestPending)
+		{
+			_graphLock = true;
+			_graph.Draw();
+			_graphLock = false;
+		}
 		PrintZoom();
 		DrawSource(0, 32 + (source1Id == OscSource::SourceCodeUst ? 240 : 0), " Uñò", source1Id == OscSource::SourceCodeUst || source2Id == OscSource::SourceCodeUst);
 		DrawSource(0, 48 + (source1Id == OscSource::SourceCodeIst ? 240 : 0), " Iñò", source1Id == OscSource::SourceCodeIst || source2Id == OscSource::SourceCodeIst);
@@ -1205,10 +1213,8 @@ public:
 		_state = StateInit;
 	}
 	
-	virtual void Close()
+	void OnClose()
 	{
-		Base::Close();
-		
 		_state = StateClosed;
 	}
 	
@@ -1355,6 +1361,13 @@ public:
 	void ProcessUpdateDataRequest(short horScroll)
 	{
 		_state = StateUpdateData;
+		
+		while (_graphLock)
+		{
+			__no_operation();
+		}
+		
+		_graphLock = true;
 		
 		typename GraphType::LineType *line1 = _graph.GetLine1();
 		typename GraphType::LineType *line2 = _graph.GetLine2();
@@ -1599,6 +1612,8 @@ public:
 		}
 				
 		_oscSource.CloseFile();
+		
+		_graphLock = false;
 		
 		if (_state == StateUpdateData)
 		{

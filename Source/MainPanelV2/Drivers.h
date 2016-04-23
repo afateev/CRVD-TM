@@ -36,9 +36,9 @@ namespace MainPanel
 		static FontType GeneralFont;
 		static FontType MenuBigFont;
 		
-		typedef Max6951<SpiWrapper<Spi::_C, typename Board::Gpio::C, 7, false, false> > StatorDisplay;
-		typedef Max6951<SpiWrapper<Spi::_C, typename Board::Gpio::C, 6, false, false> > RotorDisplay;
-		typedef MMC<SpiWrapper<Spi::_C, typename Board::Gpio::D, 0, false, false> > FlashType;
+		typedef Max6951<SpiWrapper<Spi::_C, typename Board::Gpio::C, 7, false, false, false> > StatorDisplay;
+		typedef Max6951<SpiWrapper<Spi::_C, typename Board::Gpio::C, 6, false, false, false> > RotorDisplay;
+		typedef MMC<SpiWrapper<Spi::_C, typename Board::Gpio::D, 0, false, false, true> > FlashType;
 		
 		typedef Rblib::Driver::Rs485<typename Board::Rs485Interface> Rs485Type;
 		static Rs485Type Rs485;

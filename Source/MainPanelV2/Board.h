@@ -221,6 +221,9 @@ namespace MainPanel
 			Gpio::B::SetMode(7, Gpio::B::ModeOutput);
 			Gpio::B::SetConfig(7, Gpio::B::ConfigOutputPushPull);
 			Gpio::B::ClearBit(7);
+			
+			Gpio::B::SetMode(1, Gpio::B::ModeOutput);
+			Gpio::B::SetConfig(1, Gpio::B::ConfigOutputPushPull);
 		}
 		
 		static void Rs485Init(int boudrate, bool parityEnable, bool parityEven)

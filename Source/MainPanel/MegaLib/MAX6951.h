@@ -102,6 +102,14 @@ public:
 	
 	static void WriteString(char *str, int len)
 	{
+		if (Spi::Semaphore::Busy)
+		{
+			__no_operation();
+			return;
+		}
+		
+		Spi::Semaphore::Busy = true;
+		
 		int count = len < Size ? len : Size;
 		int skip = 0;
 		for (int i = 0; i < count; i++)
@@ -118,6 +126,8 @@ public:
 				skip++;
 			}
 		}
+		
+		Spi::Semaphore::Busy = false;
 	}
 protected:
 	static void WriteReg(unsigned char reg, unsigned char data)

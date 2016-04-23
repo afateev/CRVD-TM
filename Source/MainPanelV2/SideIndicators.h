@@ -22,6 +22,7 @@ public:
 		StatorIndicator::Enable();
 		RotorIndicator::Enable();
 	}
+	
 	void Update()
 	{
 		bool problem = ActiveDriveControllerParams::HasProblem();

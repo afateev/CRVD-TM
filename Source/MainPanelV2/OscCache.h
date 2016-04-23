@@ -69,6 +69,7 @@ public:
 	
 	void StoreOscPart(unsigned int offset, unsigned char *data, int dataCount)
 	{
+		//return;
 		if (_state != StateFillBuffer)
 		{
 			return;
@@ -81,9 +82,10 @@ public:
 		
 		if (_bufferPos + dataCount <= BufferSize)
 		{
-			for (int i = 0; i < dataCount; i++)
+			for (int i = 0; i < dataCount; i += 2)
 			{
-				_buffer[_bufferPos + i] = data[i];
+				_buffer[_bufferPos + i + 1] = data[i];
+				_buffer[_bufferPos + i] = data[i + 1];
 			}
 		}
 		

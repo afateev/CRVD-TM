@@ -24,12 +24,16 @@ protected:
 	unsigned long _scrollBarHeight;
 	long _scrollPos;
 	unsigned long _scrollBarPos;
+	bool _onUpdatePosPending;
+	bool _onUpdatePosGetOscCount;
 public:
 	WindowOscList()
 	{
 		_scrollPos = 0;
 		_scrollBarPos = 0;
 		_scrollBarHeight = 0;
+		_onUpdatePosPending = false;
+		_onUpdatePosGetOscCount = false;
 	}
 	
 	virtual void Draw()
@@ -85,17 +89,13 @@ public:
 		}
 		
 		DrawScrollBar();
-		//CheckNewOsc();
 	}
 	
 	virtual void OnShow()
 	{
 		OscList::_newOscCount = 0;
 		pos = 0;
-		count = OscList::GetOscCount();
-		long newScrollPos = CalcScrollPos(pos);
-		OscList::Cache(count, count);
-		UpdateScroolPos(newScrollPos);
+		OnUpdatePos(true);
 	}
 	
 	virtual bool OnKeyDown(char &key)
@@ -137,6 +137,32 @@ public:
 			return true;
 		}
 		return false;
+	}
+	
+	void OnUpdatePos(bool getOscCount)
+	{
+		_onUpdatePosPending = true;
+		_onUpdatePosGetOscCount = getOscCount;
+	}
+	
+	void DoLoPiorityWork()
+	{
+		if (_onUpdatePosPending)
+		{
+			_onUpdatePosPending = false;
+			
+			// OnShow
+			if (_onUpdatePosGetOscCount)
+			{
+				count = OscList::GetOscCount();
+			}
+			long newScrollPos = CalcScrollPos(pos);
+			if (newScrollPos != _scrollPos || _onUpdatePosGetOscCount)
+			{
+				OscList::Cache(count - newScrollPos, count);
+			}
+			UpdateScroolPos(newScrollPos);
+		}
 	}
 protected:
 	void DrawOsc(Osc o, int y)
@@ -188,32 +214,13 @@ protected:
 		display.WriteLine(str);
 	}
 	
-	void CheckNewOsc()
-	{
-		unsigned long newOscCount = OscList::_newOscCount;
-		
-		if (pos >= newOscCount)
-			pos -= newOscCount;
-		
-		count = OscList::GetOscCount();
-		long newScrollPos = CalcScrollPos(pos);
-		OscList::Cache(count - newScrollPos);
-		UpdateScroolPos(newScrollPos);
-		
-		OscList::_newOscCount = 0;
-	}
-	
 	void SelectPrev()
 	{
 		if (pos == 0)
 			return;
 		pos--;
 		
-		//count = OscList::GetOscCount();
-		long newScrollPos = CalcScrollPos(pos);
-		if (newScrollPos != _scrollPos)
-			OscList::Cache(count - newScrollPos, count);
-		UpdateScroolPos(newScrollPos);
+		OnUpdatePos(false);
 	}
 	
 	void SelectNext()
@@ -224,11 +231,7 @@ protected:
 			return;
 		
 		pos++;
-		//count = OscList::GetOscCount();
-		long newScrollPos = CalcScrollPos(pos);
-		if (newScrollPos != _scrollPos)
-			OscList::Cache(count - newScrollPos, count);
-		UpdateScroolPos(newScrollPos);
+		OnUpdatePos(false);
 	}
 	
 	long CalcScrollPos(unsigned long newPos)

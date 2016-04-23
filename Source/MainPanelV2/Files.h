@@ -5,24 +5,38 @@
 
 Drivers::FlashType Flash;
 
+volatile MediaLocked = false;
+
 int media_read(unsigned long sector, unsigned char *buffer, unsigned long sectorsCount)
 {
+	if (MediaLocked)
+	{
+		return 0;
+	}
+	
 	if (sectorsCount > 1)
 		return 0;
 	unsigned long long addr = sector * FAT_SECTOR_SIZE;
-	if (!Flash.ReadBlock(addr, buffer, FAT_SECTOR_SIZE))
-		return 0;
-	return 1;
+	MediaLocked = true;
+	bool res = Flash.ReadBlock(addr, buffer, FAT_SECTOR_SIZE);
+	MediaLocked = false;
+	return res ? 1 : 0;
 }
 
 int media_write(unsigned long sector, unsigned char *buffer, unsigned long sectorsCount)
 {
+	if (MediaLocked)
+	{
+		return 0;
+	}
+	
 	if (sectorsCount > 1)
 		return 0;
 	unsigned long long addr = sector * FAT_SECTOR_SIZE;
-	if (!Flash.WriteBlock(addr, buffer, FAT_SECTOR_SIZE))
-		return 0;
-	return 1;
+	MediaLocked = true;
+	bool res = Flash.WriteBlock(addr, buffer, FAT_SECTOR_SIZE);
+	MediaLocked = false;
+	return res ? 1 : 0;
 }
 
 enum FatState
@@ -164,6 +178,14 @@ void FileSystemReady(bool &ready)
 	ready = fatState == FatStateReady;
 }
 
+static const unsigned char ZeroData[512]
+= {
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+};
+
 void OscCacheCreateFile(unsigned int fileNumber, unsigned int oscFileSize, bool &result)
 {
 	if (fatState != FatStateReady)
@@ -174,13 +196,13 @@ void OscCacheCreateFile(unsigned int fileNumber, unsigned int oscFileSize, bool 
 	char fileName[20];
 	snprintf(fileName, sizeof(fileName), "/oscCache/%u", fileNumber);
 	
-	FL_FILE *file = (FL_FILE*)fl_fopen(fileName, "rw");
+	FL_FILE *file = (FL_FILE*)fl_fopen(fileName, "w");
 	
 	if (!file)
 	{
 		fl_createdirectory("/oscCache/");
 		
-		file = (FL_FILE*)fl_fopen(fileName, "rw");
+		file = (FL_FILE*)fl_fopen(fileName, "w");
 	}
 	
 	if (!file)
@@ -188,12 +210,29 @@ void OscCacheCreateFile(unsigned int fileNumber, unsigned int oscFileSize, bool 
 		return;
 	}
 	
+	
 	result = true;
+	/*
 	result &= fl_fseek(file, 0, 0) == 0;
-	// записываем мусор
-	unsigned char data = 0;
-	result &= fl_fwrite(&data, oscFileSize, 1, file) == oscFileSize;
-
+	result &= fl_fwrite(ZeroData, oscFileSize, 1, file) == oscFileSize;
+	*/
+	//result &= fl_fwrite(ZeroData, sizeof(ZeroData), oscFileSize / sizeof(ZeroData), file) == oscFileSize / sizeof(ZeroData);
+	//result &= fl_fwrite(ZeroData, oscFileSize % sizeof(ZeroData), 1 , file) == oscFileSize % sizeof(ZeroData);
+	/*
+	int copyCount = oscFileSize;
+	int i = 0;
+	while (i < copyCount)
+	{
+		int portionSize = copyCount - i;
+		if (portionSize > sizeof(ZeroData))
+		{
+			portionSize = sizeof(ZeroData);
+		}
+		
+		result &= fl_fwrite(ZeroData, portionSize, 1, file) == portionSize;
+		i += portionSize;
+	}
+*/
 	fl_fclose(file);
 }
 
@@ -228,14 +267,14 @@ void OscCacheWriteFile(unsigned int fileNumber, unsigned int offset, unsigned ch
 	
 	result = true;
 	result &= fl_fseek(file, offset, 0) == 0;
-	result &= fl_fwrite(&data, count, 1, file) == count;
+	result &= fl_fwrite(data, count, 1, file) == count;
 
 	fl_fclose(file);
 }
 
-unsigned char _oscDataCopyBuffer[200];
+unsigned char _oscDataCopyBuffer[256];
 
-void CopyOscData(char *dstFileName, unsigned int fileNumber, int startPos, int endPos)
+void CopyOscData(char *dstFileName, unsigned int fileNumber, unsigned int dataOffset, int startPos, int endPos)
 {
 	if (fatState != FatStateReady)
 	{
@@ -288,8 +327,7 @@ void CopyOscData(char *dstFileName, unsigned int fileNumber, int startPos, int e
 		snprintf(srcFileName, sizeof(srcFileName), "/oscCache/%u", partFileNumber[p]);
 		
 		FL_FILE *srcFile = (FL_FILE*)fl_fopen(srcFileName, "r");
-		FL_FILE *dstFile = (FL_FILE*)fl_fopen(dstFileName, "rw");
-		if (!srcFile || !dstFile)
+		if (!srcFile)
 		{
 			return;
 		}
@@ -299,6 +337,12 @@ void CopyOscData(char *dstFileName, unsigned int fileNumber, int startPos, int e
 		int copyCount = partCount[p];
 		unsigned int startOffset = partStart[p];
 		int i = 0;
+		/*
+		for (int i = 0; i < sizeof(_oscDataCopyBuffer); i++)
+		{
+			_oscDataCopyBuffer[i] = i;
+		}*/
+		
 		while (i < copyCount)
 		{
 			int portionSize = copyCount - i;
@@ -307,16 +351,16 @@ void CopyOscData(char *dstFileName, unsigned int fileNumber, int startPos, int e
 				portionSize = sizeof(_oscDataCopyBuffer);
 			}
 			result &= fl_fseek(srcFile, startOffset + i, 0) == 0;
-			result &= fl_fread(&_oscDataCopyBuffer, portionSize, 1, srcFile) == portionSize;
+			result &= fl_fread(_oscDataCopyBuffer, portionSize, 1, srcFile) == portionSize;
 			
-			result &= fl_fseek(dstFile, 0, 2) == 0;
-			result &= fl_fwrite(&_oscDataCopyBuffer, portionSize, 1, dstFile) == portionSize;
+			FL_FILE *dstFile = (FL_FILE*)fl_fopen(dstFileName, "rw");
+			result &= fl_fseek(dstFile, dataOffset + i, 0) == 0;
+			result &= fl_fwrite(_oscDataCopyBuffer, portionSize, 1, dstFile) == portionSize;
+			fl_fclose(dstFile);
 			i += portionSize;
-			
 		}
 		
 		fl_fclose(srcFile);
-		fl_fclose(dstFile);
 	}
 }
 
