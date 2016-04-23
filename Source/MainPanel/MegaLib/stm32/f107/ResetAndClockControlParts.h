@@ -94,6 +94,16 @@ public:
 		RegRef::_register->SystemClockSelect = 1;
 	}
 	
+	inline static void SetPllSystemClock()
+	{
+		RegRef::_register->SystemClockSelect = 2;
+	}
+	
+	inline static void SetPllSource(unsigned char value)
+	{
+		RegRef::_register->PllEntryClockSource = value;
+	}
+	
 	inline static void SetPllMultiplicationFactor(unsigned char value)
 	{
 		RegRef::_register->PllMultiplicationFactor = value;

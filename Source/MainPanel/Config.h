@@ -10,7 +10,7 @@
 class Config
 {
 public:
-	static const unsigned long CoreFrequency = 25000000;		// Частота ядра ("быстрый" внешний кварц)
+	static const unsigned long CoreFrequency = 32000000;		// Частота ядра ("быстрый" внешний кварц)
 	
 	static float GetAdcMax()
 	{

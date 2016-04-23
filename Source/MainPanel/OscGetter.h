@@ -31,7 +31,7 @@ public:
 	};
 	
 	static const unsigned short FramesPerSec = 200;
-	static const unsigned char OscBufSize = 20;
+	static const unsigned char OscBufSize = 17;
 	static const unsigned short OscWaitResponseMaxCnt = 10000;
 	static const unsigned short OscWaitFileWriteMaxCnt = 350;
 	
@@ -655,7 +655,7 @@ protected:
 			
 			if (res)
 			{
-				res = header.Version == 0x0200;
+				res = header.Version == 0x0300;
 				
 				if (res)
 				{

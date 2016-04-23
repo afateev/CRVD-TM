@@ -35,7 +35,7 @@ public:
 		
 		HeaderStruct()
 		{
-			Version = 0x0200;
+			Version = 0x0300;
 			Trash = 0;
 			Length = 0;
 			Center = 0;
@@ -58,12 +58,14 @@ public:
 		}
 	};
 	
+#pragma pack(push, 1)
 	struct DataStruct
 	{
 		unsigned short Ust;
 		unsigned short Ist;
 		unsigned short Urot;
 		unsigned short Irot;
+		unsigned short Phi;
 		unsigned int Discrete;
 		
 		void SwapBytes()
@@ -72,6 +74,7 @@ public:
 			SwapBytes(&Ist);
 			SwapBytes(&Urot);
 			SwapBytes(&Irot);
+			SwapBytes(&Phi);
             SwapBytes(&Discrete);
 		}
 	protected:
@@ -104,6 +107,7 @@ public:
             *dword |= wordlo;
 		}
 	};
+#pragma pack(pop)
 	
 	static void FormatFileName(char *buffer, unsigned int bufferSize, time_t oscTime, OscType oscType)
 	{

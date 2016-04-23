@@ -747,9 +747,14 @@ int main()
 	{
 		waitTimeOut--;
 	}
-	if (ResetAndClockControl::IsExternalHightSpeedClockReady())
+	
+	ResetAndClockControl::SetPllSource(1);
+	ResetAndClockControl::SetPllMultiplicationFactor(2); // mul6
+	ResetAndClockControl::PllEnable();
+	
+	if (ResetAndClockControl::IsPllReady())
 	{
-		ResetAndClockControl::SetHightSpeedSystemClock();
+		ResetAndClockControl::SetPllSystemClock();
 	}
 	/* Пока не дописан USB
 	// PLL 48МГц для USB
@@ -776,7 +781,7 @@ int main()
 	
 	// МСО выход
 	Gpio::_A::SetAlternateOutputPin(8);
-	ResetAndClockControl::SetClockOutput(7);
+	ResetAndClockControl::SetClockOutput(4);
 	
 	//клавиатура 4
 	Gpio::_D::SetOutputPin(1);

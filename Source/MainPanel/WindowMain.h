@@ -30,7 +30,7 @@ public:
 	virtual void Draw()
 	{
 		display.MoveCursorTo(0, 0);
-		display.WriteLine("ЦРВД-ТМ");
+		display.WriteLine("ЦРВД-Б");
 		
 		PrintDateTime(40 - 19, 0 , Rtc::GetTime());
 		PrintActiveController(0, 16 + 8, ActiveDriveControllerParams::IsPrimaryActive() ? "основной регулятор" : "резервный регулятор");
@@ -44,8 +44,8 @@ public:
 		float pReact = ActiveDriveControllerParams::GetQ();
 		PrintPreact(pReact);
 		
-		unsigned int rIz = InsulationController::GetRegValue(10);
-		PrintInsulationResistance(0, 16 + 1 + 32 + 1 + 16 * 6 + 8, rIz);
+		//unsigned int rIz = InsulationController::GetRegValue(10);
+		//PrintInsulationResistance(0, 16 + 1 + 32 + 1 + 16 * 6 + 8, rIz);
 		
 		bool flagCosControl = ActiveDriveControllerParams::GetFlagCosControl();
 		bool flagRControl = ActiveDriveControllerParams::GetFlagRControl();

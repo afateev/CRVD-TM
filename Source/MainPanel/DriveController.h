@@ -187,7 +187,7 @@ public:
 							}
 						}
 						
-						unsigned int oscSize = 12;
+						unsigned int oscSize = 14;
 						
 						if (_response[1] == 0x66)
 						{
@@ -386,10 +386,10 @@ public:
 		_oscRequest.StartPoint = StartPoint;
 		
 		unsigned int count = PointsCount;
-		// в поле данных влезет не более (250 / 12) записей
-		if (count > 20)
+		// в поле данных влезет не более (250 / 14) записей
+		if (count > 17)
 		{
-			count = 20;
+			count = 17;
 		}
 		unsigned int end = StartPoint + count;
 		if (end > 0xFFFF)
