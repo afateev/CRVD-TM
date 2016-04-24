@@ -46,10 +46,8 @@ public:
 		
 		//unsigned int rIz = InsulationController::GetRegValue(10);
 		//PrintInsulationResistance(0, 16 + 1 + 32 + 1 + 16 * 6 + 8, rIz);
-		
-		bool flagCosControl = ActiveDriveControllerParams::GetFlagCosControl();
 		bool flagRControl = ActiveDriveControllerParams::GetFlagRControl();
-		PrintMode(20, 16 + 1 + 32 + 1 + 16 * 6 + 8, flagCosControl, flagRControl);
+		PrintMode(20, 16 + 1 + 32 + 1 + 16 * 6 + 8, ActiveDriveControllerParams::GetCosControl(), flagRControl);
 		
 		char *lastEventText = 0;
 		char *lastEventParamText = 0;
@@ -203,7 +201,7 @@ public:
 		display.WriteLine(str, len);
 	}
 	
-	void PrintMode(unsigned int x, unsigned int y, bool cosFlag, bool rFlag)
+	void PrintMode(unsigned int x, unsigned int y, int mode, bool rFlag)
 	{
 		char str[40];
 		unsigned char len;
@@ -216,8 +214,29 @@ public:
 		}
 		else
 		{
-			if (cosFlag)
-				len = sprintf(str, "     Канал - cosФ");
+			switch (ActiveDriveControllerParams::GetCosControl())
+			{
+			case 1:
+				{
+					len = sprintf(str, "  Канал - ток ротора");
+				}
+				break;
+			case 2:
+				{
+					len = sprintf(str, "     Канал - cosФ");
+				}
+				break;
+			case 3:
+				{
+					len = sprintf(str, "    Канал - Iреакт");
+				}
+				break;
+			case 4:
+				{
+					len = sprintf(str, "    Канал - Qреакт");
+				}
+				break;
+			}
 		}
 		
 		display.MoveCursorTo(x, y + 3);

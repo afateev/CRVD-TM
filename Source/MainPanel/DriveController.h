@@ -253,8 +253,13 @@ public:
                 if (ModBus::IsReady())
                 {    
                     bool changed = false;
-                    for (unsigned int i = 100; i < 256; i++)
+                    for (unsigned int i = 0; i < 256; i++)
                     {
+                        if (i != 15 && i < 100)
+						{
+							continue;
+						}
+						
                         if (i == 0)
                         {
                             _writeReg97 = false;
@@ -484,7 +489,7 @@ template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress
 unsigned char DriveController<ModBus, MainAddres, AdditionalAddress>::_regRequestCount = 0;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-const RequestInfo DriveController<ModBus, MainAddres, AdditionalAddress>::requests[2] = {RequestInfo(1, 15), RequestInfo(100, 65)};
+const RequestInfo DriveController<ModBus, MainAddres, AdditionalAddress>::requests[2] = {RequestInfo(1, 15), RequestInfo(100, 69)};
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
 bool DriveController<ModBus, MainAddres, AdditionalAddress>::_writeReg97 = false;

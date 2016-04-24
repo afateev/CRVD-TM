@@ -32,6 +32,8 @@ enum EventCode
 	EventRunReserve		= 18,
 	EventRunEmergency	= 19,
 	EventProgramStart	= 20,
+	EventReactCurrentControl	= 21,
+	EventReactPowerControl		= 22,
 	//EventSetDown		= ,
 	//EventSetUp		= ,
 	
@@ -115,6 +117,10 @@ public:
 			return "Включен канал по cosF";
 		case EventRotorCurrentControl:
 			return "Включен канал по Iр";
+		case EventReactCurrentControl:
+			return "Включен канал по Iреакт";
+		case EventReactPowerControl:
+			return "Включен канал по Qреакт";
 		case EventRControl:
 			return "Ручное управление вкл";
 		case EventHeatRot:

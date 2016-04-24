@@ -106,7 +106,6 @@ public:
 	{
 		SfEnergizing	= 0,
 		SfForcing		= 1,
-		SfOmv			= 2,
 		SfCosControl	= 3,
 		SfRControl		= 4,
 		SfSetDown		= 5,
@@ -188,7 +187,9 @@ public:
         RegStatorVoltageMaxDisplay = 161,
         RegStatorCurrentMaxDisplay = 162,
         RegRotorVoltageMaxDisplay = 163,
-        RegRotorCurrentMaxDisplay = 164
+        RegRotorCurrentMaxDisplay = 164,
+		RegEnergizingReactCurrentSetup = 165,
+		RegEnergizingReactPowerSetup = 167,
 	};
 	
 	enum IndicationParams
@@ -422,9 +423,12 @@ public:
 		return res;
 	}
 	
-	static bool GetFlagCosControl()
+	static int GetCosControl()
 	{
-		return GetFlag(StateReg, SfCosControl);
+		int bit0 = GetFlag(StateReg, SfCosControl - 1);
+		int bit1 = GetFlag(StateReg, SfCosControl);
+		int val = bit1 << 1 | bit0;
+		return val + 1;
 	}
 	
 	static bool GetFlagRControl()
