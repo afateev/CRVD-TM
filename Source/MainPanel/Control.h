@@ -31,9 +31,7 @@ protected:
 	typedef StaticVariableWrapper<Control *>_focused;
 	Control *_next;
 	unsigned short _x;
-	unsigned short _y;
-	unsigned short _width;
-	unsigned short _height;
+	unsigned char _y;
 public:
 	
 	Control()
@@ -42,8 +40,6 @@ public:
 		_id = InvalidId;
 		_x = 0;
 		_y = 0;
-		_width = 0;
-		_height = 0;
 		_next = 0;
 	}
 	
