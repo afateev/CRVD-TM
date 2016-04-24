@@ -945,6 +945,8 @@ int main()
 	fl_init();
 	
 	Events::Init(EventsRead, EventsWrite, EventsSeek);
+	PrimaryController::Init();
+	ReserveController::Init();
 	ActiveDriveControllerParams::Init(ControllerFilesRead, ControllerFilesWrite);
 	
 	OscGet::Init(OscFilesRead, OscFilesWrite);

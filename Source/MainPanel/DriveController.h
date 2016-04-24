@@ -83,6 +83,11 @@ protected:
 public:	
 	static bool DoOnlyLowerRegsRequest;
 public:
+	static void Init()
+	{
+		SetRegValue(15, 0);
+	}
+	
 	static bool Run()
 	{
 		switch(_state)
@@ -236,7 +241,7 @@ public:
                         
                         if (_regState[i].Has && _regState[i].Edited)
                         {
-                            if (_registers[i] != _editedRegisters[i])
+                            if (_registers[i] != _editedRegisters[i] || i == 15/*регистр синхронизации записываем всегда*/)
                             {
                                 unsigned int requestSize = ModBusMaster::BuildWriteHoldingRegister(_request, _address, i, _editedRegisters[i]);
 					            
