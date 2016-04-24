@@ -80,12 +80,18 @@ protected:
 	static bool _oscRequestWait;
 	static bool _oscResponseReady;
 	static OscRequestInfo _oscRequest;
-public:	
+public:
+	static unsigned short LastValidOscPointer;
 	static bool DoOnlyLowerRegsRequest;
 public:
 	static void Init()
 	{
 		SetRegValue(15, 0);
+	}
+	
+	static bool ImActive()
+	{
+		return _address == 1;
 	}
 	
 	static bool Run()
@@ -190,6 +196,21 @@ public:
 								_regState[reg].Has = true;
 								
 								regPtr += 2;
+								
+								if (ImActive())
+								{
+									if (reg == 15)
+									{
+										if (regValue == 0)
+										{
+											SetRegValue(15, LastValidOscPointer);
+										}
+										else
+										{
+											LastValidOscPointer = GetRegValue(9);
+										}
+									}
+								}
 							}
 						}
 						
@@ -463,7 +484,7 @@ template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress
 unsigned char DriveController<ModBus, MainAddres, AdditionalAddress>::_regRequestCount = 0;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
-const RequestInfo DriveController<ModBus, MainAddres, AdditionalAddress>::requests[2] = {RequestInfo(1, 14), RequestInfo(100, 65)};
+const RequestInfo DriveController<ModBus, MainAddres, AdditionalAddress>::requests[2] = {RequestInfo(1, 15), RequestInfo(100, 65)};
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
 bool DriveController<ModBus, MainAddres, AdditionalAddress>::_writeReg97 = false;
@@ -485,5 +506,8 @@ OscRequestInfo DriveController<ModBus, MainAddres, AdditionalAddress>::_oscReque
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
 bool DriveController<ModBus, MainAddres, AdditionalAddress>::DoOnlyLowerRegsRequest = false;
+
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress>
+unsigned short DriveController<ModBus, MainAddres, AdditionalAddress>::LastValidOscPointer = 0;
 
 #endif
