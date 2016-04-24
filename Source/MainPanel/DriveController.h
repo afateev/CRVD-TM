@@ -92,6 +92,7 @@ public:
 				if (ModBus::IsReady())
 				{
                     ModBus::ChangeSpeed(Config::CoreFrequency, 115200);
+					ModBus::WaitLastByteTx = false;
 										
 					if (_oscRequestWait && _regRequestCount > 0)
 					{

@@ -1,15 +1,18 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-//	Fateev A.I.		27/12/2011
+//	Fateev A.I.		17/14/2016
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef INSULATIONCONTROL_H
-#define INSULATIONCONTROL_H
+#ifndef CONTROLLERDIAGNOSTIC_H
+#define CONTROLLERDIAGNOSTIC_H
 
-template<class ModBus, unsigned char BusAddres>
-class InsulationControl
+template<class ModBus, unsigned char BusAddres, int FirstReg, int RegCount>
+class ControllerDiagnostic
 {
+public:
+	typedef void TxEnableCallbackType(bool);
+	static TxEnableCallbackType *TxEnableCallback;
 protected:
 	enum State
 	{
@@ -23,8 +26,7 @@ protected:
 	static unsigned char _request[256];
 	static unsigned char *_response;
 	
-	static unsigned char _address;
-	static unsigned int _registers[64];
+	static unsigned int _registers[RegCount];
 public:
 	static bool Run()
 	{
@@ -35,8 +37,11 @@ public:
 				if (ModBus::IsReady())
 				{
 					ModBus::ChangeSpeed(Config::CoreFrequency, 9600);
-					ModBus::WaitLastByteTx = false;
-                    unsigned int requestSize = ModBusMaster::BuildReadHoldingRegisters(_request, _address, 1, 10);
+					ModBus::WaitLastByteTx = true;
+					unsigned char address = BusAddres;
+                    unsigned int requestSize = ModBusMaster::BuildReadHoldingRegisters(_request, address, FirstReg, RegCount);
+					ModBus::OnTxCompleteCallback = OnTxCompleteCallback;
+					TxEnableCallback(true);
 					ModBus::SendRequest(_request, requestSize);
 					_state = StateWait;
 				}
@@ -92,12 +97,22 @@ public:
 		return StateComplete == _state;
 	}
 	
+	static unsigned char GetAddress()
+	{
+		return BusAddres;
+	}
+	
 	static unsigned short GetRegValue(unsigned char reg)
 	{
 		if (reg > 63)
 			return 0;
 		
 		return _registers[reg];
+	}
+	
+	static void GetRegValue(int reg, unsigned short &value)
+	{
+		value = GetRegValue(reg);
 	}
 	
 	static bool GetRegValues(unsigned char *buffer, unsigned int bufferLen, unsigned short firstAddr, unsigned short quantity)
@@ -136,27 +151,28 @@ public:
 		return true;
 	}
 	
-	static unsigned char GetAddress()
+	static void OnTxCompleteCallback()
 	{
-		return _address;
+		ModBus::OnTxCompleteCallback = 0;
+		TxEnableCallback(false);
 	}
 };
 
-template<class ModBus, unsigned char BusAddres>
-typename InsulationControl<ModBus, BusAddres>::State
-InsulationControl<ModBus, BusAddres>::_state = 
-InsulationControl<ModBus, BusAddres>::StateRequest;
+template<class ModBus, unsigned char BusAddres, int FirstReg, int RegCount>
+ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::TxEnableCallbackType *ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::TxEnableCallback;
 
-template<class ModBus, unsigned char BusAddres>
-unsigned char InsulationControl<ModBus, BusAddres>::_request[256];
+template<class ModBus, unsigned char BusAddres, int FirstReg, int RegCount>
+typename ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::State
+ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::_state = 
+ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::StateRequest;
 
-template<class ModBus, unsigned char BusAddres>
-unsigned char *InsulationControl<ModBus, BusAddres>::_response;
+template<class ModBus, unsigned char BusAddres, int FirstReg, int RegCount>
+unsigned char ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::_request[256];
 
-template<class ModBus, unsigned char BusAddres>
-unsigned char InsulationControl<ModBus, BusAddres>::_address = BusAddres;
+template<class ModBus, unsigned char BusAddres, int FirstReg, int RegCount>
+unsigned char *ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::_response;
 
-template<class ModBus, unsigned char BusAddres>
-unsigned int InsulationControl<ModBus, BusAddres>::_registers[64];
+template<class ModBus, unsigned char BusAddres, int FirstReg, int RegCount>
+unsigned int ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::_registers[];
 
 #endif

@@ -11,7 +11,7 @@
 #include "SevenSegmentDigit.h"
 #include <ctime>
 
-template<class DisplayType, DisplayType &display, class ActiveDriveControllerParams, class InsulationController, class Events>
+template<class DisplayType, DisplayType &display, class ActiveDriveControllerParams/*, class InsulationController*/, class Events>
 class WindowMain : public Window<DisplayType, display>
 {
 protected:

@@ -9,7 +9,7 @@
 
 #include "Window.h"
 
-template<class DisplayType, DisplayType &display, class PrimaryController, class ReserveController, class InsulationController>
+template<class DisplayType, DisplayType &display, class PrimaryController, class ReserveController, class PrimaryDiagnostic, class ReserveDiagnostic>
 class WindowDebugRegisters : public Window<DisplayType, display>
 {
 public:
@@ -18,7 +18,7 @@ public:
 		char str[100];
 		unsigned char len;
 		
-		len = sprintf(str, "Ðåã. ÎÐÂ 0x%2.2X ÐÐÂ 0x%2.2X ÀÐÂ ---- ÊÈ  0x%2.2X ", PrimaryController::GetAddress(), ReserveController::GetAddress(), InsulationController::GetAddress());
+		len = sprintf(str, "Ðåã. ÎÐÂ 0x%2.2X ÐÐÂ 0x%2.2X ÄÎ  0x%2.2X ÄÐ  0x%2.2X ", PrimaryController::GetAddress(), ReserveController::GetAddress(), PrimaryDiagnostic::GetAddress(), ReserveDiagnostic::GetAddress());
 		display.MoveCursorTo(0, 0);
 		display.WriteLine(str, len);
 		
@@ -50,19 +50,11 @@ public:
 			display.MoveCursorTo(14, 16 * i);
 			display.WriteLine(str, len);
 			
-			len = sprintf(str, "[------]");
-			//len = sprintf(str, "[ %5d]", xxx::GetRegValue(i));
+			len = sprintf(str, "[ %5d]", PrimaryDiagnostic::GetRegValue(i));
 			display.MoveCursorTo(23, 16 * i);
 			display.WriteLine(str, len);
 			
-			if (i >= 1 && i <= 10)
-			{
-				len = sprintf(str, "[ %5d]", InsulationController::GetRegValue(i));
-			}
-			else
-			{
-				len = sprintf(str, "[------]");
-			}
+			len = sprintf(str, "[ %5d]", ReserveDiagnostic::GetRegValue(i));
 			display.MoveCursorTo(32, 16 * i);
 			display.WriteLine(str, len);				
 		}

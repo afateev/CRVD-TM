@@ -10,7 +10,7 @@
 #include "fat_filelib\fat_format.h"
 #include "DriveController.h"
 #include "DriveControllerParams.h"
-#include "InsulationControl.h"
+#include "ControllerDiagnostic.h"
 #include "DriveControllerSwitch.h"
 #include "PortScanner.h"
 #include "KeyboardScanner.h"
@@ -83,7 +83,9 @@ typedef ModBusSlaveStateMachine<ComPort485, 256> 		ModBusSlaveState;
 typedef ModBusSlave<ModBusSlaveState>					ModBus485Slave;
 typedef DriveController<ModBusState, 0x01, 0x02> 	PrimaryController;
 typedef DriveController<ModBusState, 0x02, 0x01> 	ReserveController;
-typedef InsulationControl<ModBusState, 0x01> 		InsulationController;
+typedef ControllerDiagnostic<ModBusState, 0x01, 1, 17>	MainControllerDiagnostic;
+typedef ControllerDiagnostic<ModBusState, 0x02, 1, 17>	ReservControllerDiagnostic;
+typedef ControllerDiagnostic<ModBusState, 0x03, 1, 17>	ControllerDiagnosticTemperature;
 
 DriveControllerInterface<PrimaryController, true>	PrimaryControllerInterface;
 DriveControllerInterface<ReserveController, false>	ReserveControllerInterface;
@@ -104,7 +106,7 @@ public:
 	}
 };
 
-typedef PortScanner<PrimaryController, ReserveController, Empty, InsulationController> portScanner;
+typedef PortScanner<PrimaryController, ReserveController, MainControllerDiagnostic, ReservControllerDiagnostic, ControllerDiagnosticTemperature> portScanner;
 /*
 typedef Max6951<SoftwareSpi<Gpio::_C, 10, Gpio::_C, 12, Gpio::_C, 11, Gpio::_C, 7, false, true> > StatorDisplay;
 typedef Max6951<SoftwareSpi<Gpio::_C, 10, Gpio::_C, 12, Gpio::_C, 11, Gpio::_C, 6, false, true> > RotorDisplay;
@@ -162,6 +164,7 @@ MenuItemList menuListModbusSetup("Настройка Modbus");
 MenuItemList menuListControllerSetup("Параметры регулятора");
 MenuItemList menuListControllerUstSetup("Уставки регулирования");
 MenuItemList menuListIndicationSetup("Параметры индикации");
+MenuItemList menuListDiagnostic("Диагностика");
 
 MenuItem menuViewWaveforms("Осциллограммы", ShowWindow<wndIdOscList>);
 MenuItem menuViewEvents("Журнал событий", ShowWindow<wndIdEvents>);
@@ -171,6 +174,7 @@ MenuItem menuSystemSetup("Системные параметры", &menuListSystemSetup);
 MenuItem menuControllerSetup("Параметры регулятора", &menuListControllerSetup);
 MenuItem menuControllerUstSetup("Уставки регулятора", &menuListControllerUstSetup);
 MenuItem menuIndicationSetup("Параметры индикации", &menuListIndicationSetup);
+MenuItem menuDiagnostic("Диагностика", &menuListDiagnostic);
 
 MenuItem menuGraph("Осциллограмма", ShowOsc);
 MenuItem menuDebugRegisters("Регистры", ShowWindow<wndIdDebugRegisters>);
@@ -182,6 +186,9 @@ MenuItem menuSetupModbus("Modbus", &menuListModbusSetup);
 MenuItem menuResetOperatingTime("Сбросить счётчик наработки              ", ShowWindow<wndIdResetOperatingTime>);
 MenuItem menuSetupIP("IP адрес");
 MenuItem menuSetupNetwork("Сетевой обмен");
+
+MenuItem menuDiagnosticMain("Основной", ShowWindow<wndIdDiagnosticMain>);
+MenuItem menuDiagnosticReserv("Резервный", ShowWindow<wndIdDiagnosticReserv>);
 
 //MenuItem menuControllerNominalStatorCurrent("Номинальный ток статора", ShowWindow<wndIdControllerNominalStatorCurrent>, GetEditingValueString<wndIdControllerNominalStatorCurrent>);
 //MenuItem menuControllerRotorCurrentMax("I ротора максимальное (А)", ShowWindow<wndIdControllerRotorCurrentMax>, GetEditingValueString<wndIdControllerRotorCurrentMax>);
@@ -201,13 +208,15 @@ void Setter(float value)
 
 }
 
-WindowMain<Display, display, ActiveDriveControllerParams, InsulationController, Events> wndMain;
-WindowDebugRegisters<Display, display, PrimaryController, ReserveController, InsulationController> wndDebugRegisters;
+WindowMain<Display, display, ActiveDriveControllerParams, Events> wndMain;
+WindowDebugRegisters<Display, display, PrimaryController, ReserveController, MainControllerDiagnostic, ReservControllerDiagnostic> wndDebugRegisters;
 WindowEvents<Display, display, Events, Event> wndEvents;
 WindowConfigSystemDateTime<Display, display> wndConfigSystemDateTime(&menuBigFont);
 WindowResetOperatingTime<Display, display, ActiveDriveControllerParams> wndResetOperatingTime(&menuBigFont);
 WindowGraph<Display, display, DrawContext, &context> wndGraph;
 WindowOscList<Display, display, OscGet, OscFileFormat::OscFileDescription, DesctopType, &desctop, WindowGraph<Display, display, DrawContext, &context>, &wndGraph, wndIdGraph> wndOscList;
+WindowDiagnosticRegulator<Display, display, MainControllerDiagnostic, true> wndDiagnosticRegulatorMain;
+WindowDiagnosticRegulator<Display, display, ReservControllerDiagnostic, false> wndDiagnosticRegulatorReserv;
 
 //WindowControllerNominalStatorCurrent<Display, display, ActiveDriveControllerParams> wndControllerNominalStatorCurrent(&menuBigFont);
 /*
@@ -248,8 +257,9 @@ void MenuInit()
 	menuListRoot.Add(&menuSystemSetup);
 	menuListRoot.Add(&menuControllerSetup);
 	menuListRoot.Add(&menuIndicationSetup);
+	menuListRoot.Add(&menuDiagnostic);
 	//menuListRoot.Add(&menuDebugRegisters);
-	menuListRoot.Add(&menuMainScreen);
+	//menuListRoot.Add(&menuMainScreen);
 	//menuListRoot.Add(&menuHideAll);
 	
 	menuListSystemSetup.Add(&menuSetupDateTime);
@@ -261,6 +271,10 @@ void MenuInit()
     
     //menuListControllerSetup.Add(&menuControllerNominalStatorCurrent);
 	menuListIndicationSetup.Add(&menuResetOperatingTime);
+	
+	menuListDiagnostic.Add(&menuDiagnosticMain);
+	menuListDiagnostic.Add(&menuDiagnosticReserv);
+	menuListDiagnostic.Add(&menuDebugRegisters);
 		
 	mainMenu.SetRoot(&menuListRoot);
 }
@@ -274,6 +288,8 @@ void DesctopInit()
 	wndResetOperatingTime.SetOnClose(OnWindowClose);
 	wndOscList.SetOnClose(OnWindowClose);
     
+	wndDiagnosticRegulatorMain.SetOnClose(OnWindowClose);
+	wndDiagnosticRegulatorReserv.SetOnClose(OnWindowClose);
 	
 	desctop.RegisterWindow(&wndMain, wndIdMain);
 	desctop.RegisterWindow(&wndOscList, wndIdOscList);
@@ -282,6 +298,8 @@ void DesctopInit()
 	desctop.RegisterWindow(&wndEvents, wndIdEvents);
 	desctop.RegisterWindow(&wndConfigSystemDateTime, wndIdConfigSystemDateTime);
 	desctop.RegisterWindow(&wndResetOperatingTime, wndIdResetOperatingTime);
+	desctop.RegisterWindow(&wndDiagnosticRegulatorMain, wndIdDiagnosticMain);
+	desctop.RegisterWindow(&wndDiagnosticRegulatorReserv, wndIdDiagnosticReserv);
     
 	//wndControllerNominalStatorCurrent.SetOnClose(OnWindowClose);
 	//desctop.RegisterWindow(&wndControllerNominalStatorCurrent, wndIdControllerNominalStatorCurrent);
@@ -427,7 +445,7 @@ void OneKiloHertz2()
 {
 	static unsigned int portScannerCnt = 0;
 	static unsigned int oscGetterCnt = 0;
-	static unsigned int insulationControlCnt = 0;
+	static unsigned int diagnosticCnt = 0;
 	
 	if (portScannerCnt >= 10)
 	{
@@ -462,21 +480,18 @@ void OneKiloHertz2()
 			}
 		}
 		
-		if (insulationControlCnt >= 1000)
+		portScanner::SkipDiagnostic = diagnosticCnt > 0;
+		if (diagnosticCnt < 100)
 		{
-			portScanner::SkipInsulationControl = false; 
-			insulationControlCnt = 0;
-		}
-		
-		insulationControlCnt++;
-		
-		if (!portScanner::SkipInsulationControl)
-		{
-			portScanner::SkipInsulationControl = portScanner::RunCountInsulationControl > 0;
+			if (portScanner::RunCountDiagnostic > 0)
+			{
+				diagnosticCnt++;
+			}
 		}
 		else
 		{
-			portScanner::RunCountInsulationControl = 0;
+			portScanner::RunCountDiagnostic = 0;
+			diagnosticCnt = 0;
 		}
 		
 		portScanner::Run();
@@ -723,20 +738,32 @@ unsigned long FatStateWaitGuardTimeout = 0;
 bool GetRegValues(unsigned char *buffer, unsigned int bufferLen, unsigned short firstAddr, unsigned short quantity)
 {
 	bool res = false;
-	
+	/*
 	if (firstAddr >= 200 && (firstAddr + quantity - 1) < 201 )
 	{
 		// контроль изоляции
 		// 10 - й мапится на 200-й
 		res = InsulationController::GetRegValues(buffer, bufferLen, firstAddr + 10, quantity);
 	}
-	else
+	else*/
 	{
 		// активный регулятор
 		res = ActiveDriveControllerParams::GetRegValues(buffer, bufferLen, firstAddr, quantity);
 	}
 	
 	return res;
+}
+
+void DiagnosticRs485TxEnable(bool enable)
+{
+	if (enable)
+	{
+		Gpio::_B::SetBit(7);
+	}
+	else
+	{
+		Gpio::_B::ClearBit(7);
+	}
 }
 
 int main()
@@ -765,6 +792,7 @@ int main()
 	*/
 	ResetAndClockControl::EnableAlternateFunction();
 	ResetAndClockControl::EnableGpioPortA();
+	ResetAndClockControl::EnableGpioPortB();
 	ResetAndClockControl::EnableGpioPortC();
 	ResetAndClockControl::EnableGpioPortD();
 	ResetAndClockControl::EnableGpioPortE();
@@ -849,6 +877,9 @@ int main()
 	InterruptController::InterruptEnable(InterruptIdUsb);
 	*/
 	
+	// Diagnostic Rs485 TxEnable
+	Gpio::_B::SetOutputPin(7);
+	
 	context.Init(&lcd);
 	context.SelectFont(&generalFont);
 	
@@ -876,6 +907,10 @@ int main()
 	
 	ActiveDriveControllerParams::SetActiveController(&PrimaryControllerInterface);
 	ControllerSwitch::Init();
+	
+	MainControllerDiagnostic::TxEnableCallback = DiagnosticRs485TxEnable;
+	ReservControllerDiagnostic::TxEnableCallback = DiagnosticRs485TxEnable;
+	ControllerDiagnosticTemperature::TxEnableCallback = DiagnosticRs485TxEnable;
 	
 	keyboardScanner::Init();
 	keyboardScanner::SetOnKeyDown(OnKeyDownCallback);

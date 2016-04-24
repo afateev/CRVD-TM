@@ -17,6 +17,7 @@
 #include "WindowResetOperatingTime.h"
 #include "WindowOscList.h"
 #include "WindowGraph.h"
+#include "WindowDiagnosticRegulator.h"
 
 enum WindowId
 {
@@ -85,6 +86,9 @@ enum WindowId
 	wndIdModbusBoudrate,
 	wndIdModbusParity,
 	wndIdModbusParityType,
+	
+	wndIdDiagnosticMain,
+	wndIdDiagnosticReserv,
 	
     wndIdLast		// не удалять, это типа максимальное количество окон, должно быть в конце перечисления
 };
