@@ -44,7 +44,8 @@ namespace Rblib
 			PlatformEfm32gg990f1024, Efm32gg::Gpio
 #endif
 #ifdef STM32
-        PlatformStm32, Stm32::Gpio
+			PlatformStm32F1, Stm32::F1::Gpio,
+			PlatformStm32F4, Stm32::F4::Gpio
 #endif
 		>::Result GpioTypes;
 	

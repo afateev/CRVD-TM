@@ -74,7 +74,7 @@ namespace NvicImplementation
 	{
 	public:
 		static const Core::RegisterAddressType Address = 0xE000E400;
-		static const int MaxCount = 31;
+		static const int MaxCount1 = 31;
 	protected:
 		typedef Register<Address, unsigned char> Register;
 	public:

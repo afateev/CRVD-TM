@@ -21,7 +21,8 @@ namespace Rblib
 			PlatformEfm32gg990f1024, Efm32gg990f1024::Nvic
 #endif
 #ifdef STM32
-			PlatformStm32, Stm32::Nvic
+			PlatformStm32F1, Stm32::Nvic,
+			PlatformStm32F4, Stm32::Nvic
 #endif
 		>::Result NvicTypes;
 	

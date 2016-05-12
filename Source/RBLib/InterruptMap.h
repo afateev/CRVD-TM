@@ -43,7 +43,8 @@ namespace Rblib
 			PlatformEfm32gg990f1024, Efm32gg::InterruptMap
 #endif
 #ifdef STM32
-			PlatformStm32, Stm32::InterruptMap<RBLIB_PALTFORM_AUTODETECT_ID>
+			PlatformStm32F1, Stm32::F1::InterruptMap<RBLIB_PALTFORM_AUTODETECT_ID>,
+			PlatformStm32F4, Stm32::F4::InterruptMap<RBLIB_PALTFORM_AUTODETECT_ID>
 #endif
 		>::Result InterruptMapTypes;
 	

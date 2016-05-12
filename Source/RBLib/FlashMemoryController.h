@@ -36,7 +36,8 @@ namespace Rblib
 			PlatformMsp430f5659, Msp430f5659::FlashMemoryController
 #endif
 #ifdef STM32
-			PlatformStm32, Stm32::FlashMemoryController
+			PlatformStm32F1, Stm32::F1::FlashMemoryController,
+			PlatformStm32F4, Stm32::F4::FlashMemoryController
 #endif
 		>::Result FlashMemoryControllerTypes;
 	

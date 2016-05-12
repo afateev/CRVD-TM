@@ -12,7 +12,8 @@ namespace Rblib
 	// Селектор платформа / пространство имён
 	typedef MakePlatformTypelist<
 #ifdef STM32
-			PlatformStm32, Stm32::Usart
+			PlatformStm32F1, Stm32::F1::Usart,
+			PlatformStm32F4, Stm32::F4::Usart
 #endif
 		>::Result UsartTypes;
 	
