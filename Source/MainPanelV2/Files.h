@@ -5,7 +5,7 @@
 
 Drivers::FlashType Flash;
 
-volatile MediaLocked = false;
+volatile bool MediaLocked = false;
 
 int media_read(unsigned long sector, unsigned char *buffer, unsigned long sectorsCount)
 {
