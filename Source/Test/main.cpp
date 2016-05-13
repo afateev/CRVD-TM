@@ -3,6 +3,9 @@
 
 typedef Rblib::ResetAndClockControl Rcc;
 typedef Rblib::FlashMemoryController FlashMemoryController;
+typedef Rblib::Nvic Nvic;
+typedef Rblib::Gpio Gpio;
+typedef Rblib::Usb::OtgFs Usb;
 
 int main()
 {
@@ -54,6 +57,27 @@ int main()
 	
 	// ядро от PLL
 	Rcc::SetSystemClock(Rcc::SystemClockPLL);
+	
+	Rcc::EnableClockPortA();
+	Rcc::EnableClockPortC();
+	Rcc::EnableClockOTGFS();
+	
+	// MCO1
+	Gpio::A::SetMode(8, Gpio::A::ModeAlternate);
+	Gpio::A::SetAlternateFunctionNumber(8, 0);
+	Gpio::A::SetOutputSpeed(8, Gpio::A::SpeedVeryHight);
+	Rcc::SetClockOutput1Prescaler(Rcc::McoPrescalerDiv4);
+	Rcc::SetClockOutput1(Rcc::ClockOutput1Pll);
+	
+	// MCO2
+	Gpio::C::SetMode(9, Gpio::C::ModeAlternate);
+	Gpio::C::SetAlternateFunctionNumber(9, 0);
+	Gpio::C::SetOutputSpeed(9, Gpio::C::SpeedVeryHight);
+	Rcc::SetClockOutput2Prescaler(Rcc::McoPrescalerDiv4);
+	Rcc::SetClockOutput2(Rcc::ClockOutput2SysClk);
+	
+	Nvic::InterruptEnable(Nvic::InterruptVector_OTG_FS);
+	Usb::Init();
 	
 	while(1)
 	{
