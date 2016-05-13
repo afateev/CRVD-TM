@@ -94,6 +94,49 @@ namespace GpioImplementation
 		}
 	};
 	
+	// GPIO port output speed register (GPIOx_OSPEEDR) (x = A..I/J/K)
+	template
+		<
+			Core::RegisterAddressType BaseAddress
+		>
+	class PortOutputSpeedRegister
+	{
+	public:
+		static const Core::RegisterAddressType AddressOffset = 0x08;
+		static const Core::RegisterAddressType Address = BaseAddress + AddressOffset;
+		
+		enum Speed
+		{
+			SpeedLow			= 0,
+			SpeedMedium			= 1,
+			SpeedHight			= 2,
+			SpeedVeryHight		= 3,
+		};
+	protected:
+		typedef Register<Address, Core::RegisterValueType> Register;
+	public:
+		static void SetOutputSpeed(unsigned char pin, Speed val)
+		{
+			volatile Core::RegisterValueType *ptr = 0;
+			unsigned char offset = 0;
+			
+			if (pin <= 15)
+			{
+				ptr = Register::Ptr();
+				offset = pin * 2;
+			}
+			
+			if (ptr)
+			{
+				Core::RegisterValueType regVal = *ptr;
+				regVal &= ~(0x03 << offset);
+				regVal |= val << offset;
+				
+				*ptr = regVal;
+			}
+		}
+	};
+	
 	// GPIO port pull-up/pull-down register (GPIOx_PUPDR) (x = A..I/J/K)
 	template
 		<
@@ -220,7 +263,7 @@ namespace GpioImplementation
 		typedef Register<AddressLow, Core::RegisterValueType> RegisterLow;
 		typedef Register<AddressHi, Core::RegisterValueType> RegisterHi;
 	public:
-		static void SetMode(unsigned char pin, unsigned char functionNumber)
+		static void SetAlternateFunctionNumber(unsigned char pin, unsigned char functionNumber)
 		{
 			volatile Core::RegisterValueType *ptr = 0;
 			unsigned char offset = 0;
@@ -257,6 +300,7 @@ namespace GpioImplementation
 		public IdObjectBase<IdObj>,
 		public PortModeRegister<BaseAddress>,
 		public PortOutputTypeRegister<BaseAddress>,
+		public PortOutputSpeedRegister<BaseAddress>,
 		public PortPullUpPullDownRegister<BaseAddress>,
 		public PortInputDataRegister<BaseAddress>,
 		public PortOutputDataRegister<BaseAddress>,
