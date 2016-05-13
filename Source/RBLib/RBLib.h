@@ -95,6 +95,9 @@
 // Alternate function I/O
 #include "Afio.h"
 
+// USB
+#include "Usb.h"
+
 // Äנאיגונû ףסענמיסעג
 #include "Driver.h"
 

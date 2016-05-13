@@ -5,6 +5,7 @@
 #include "../../Utils/CallbackListWrapper.h"
 #include "../../Timer.h"
 #include "../../Usart.h"
+#include "../../Usb.h"
 
 namespace Rblib
 {
@@ -370,6 +371,7 @@ namespace F4
 		
 		static void OTG_FS()
 		{
+			Usb::OtgFs::InterruptHandler();
 		}
 		
 		static void DMA2_Stream5()
