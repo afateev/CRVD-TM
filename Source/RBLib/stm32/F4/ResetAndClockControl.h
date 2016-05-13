@@ -270,9 +270,19 @@ namespace ResetAndClockControlImplementation
 			Register::Ptr()->PPRE2 = prescaler;
 		}
 		
+		static void SetClockOutput1Prescaler(McoPrescaler val)
+		{
+			Register::Ptr()->MCO1PRE = val;
+		}
+		
 		static void SetClockOutput1(ClockOutput1 clockOutput)
 		{
 			Register::Ptr()->MCO1 = clockOutput;
+		}
+		
+		static void SetClockOutput2Prescaler(McoPrescaler val)
+		{
+			Register::Ptr()->MCO2PRE = val;
 		}
 		
 		static void SetClockOutput2(ClockOutput2 clockOutput)
