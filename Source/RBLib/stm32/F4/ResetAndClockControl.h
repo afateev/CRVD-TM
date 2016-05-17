@@ -731,6 +731,66 @@ namespace ResetAndClockControlImplementation
 		}
 	};
 	
+	// RCC Backup domain control register (RCC_BDCR)
+	template
+		<
+			Core::RegisterAddressType BaseAddress
+		>
+	class BackupDomainControlRegister
+	{
+	public:
+		static const Core::RegisterAddressType AddressOffset = 0x70;
+		static const Core::RegisterAddressType Address = BaseAddress + AddressOffset;
+		
+		enum RtcSource
+		{
+			RtcSourceNoCLock		= 0,
+			RtcSourceLSE			= 1,
+			RtcSourceLSI			= 2,
+			RtcSourceHSE			= 3,
+		};
+	protected:
+		struct RegStruct
+		{
+			Core::RegisterValueType LSEON									: 1;
+			Core::RegisterValueType LSERDY									: 1;
+			Core::RegisterValueType LSEBYP									: 1;
+			Core::RegisterValueType 										: 5;
+			Core::RegisterValueType RTCSEL									: 2;
+			Core::RegisterValueType 										: 5;
+			Core::RegisterValueType RTCEN									: 1;
+			Core::RegisterValueType BDRST									: 1;
+			Core::RegisterValueType 										: 15;
+		};
+		
+		typedef Register<Address, RegStruct> Register;
+	public:
+		static void LSEEnable(bool enable = true)
+		{
+			Register::Ptr()->LSEON = enable;
+		}
+		
+		static bool LSEReady()
+		{
+			return Register::Ptr()->LSERDY;
+		}
+		
+		static void SetRtcSource(RtcSource source)
+		{
+			Register::Ptr()->RTCSEL = source;
+		}
+		
+		static void RtcEnable(bool enable = true)
+		{
+			Register::Ptr()->RTCEN = enable;
+		}
+		
+		static bool IsRtcEnabled()
+		{
+			return Register::Ptr()->RTCEN;
+		}
+	};
+	
 	template
 		<
 			unsigned int IdObj
@@ -744,7 +804,8 @@ namespace ResetAndClockControlImplementation
 		public AHB2PeripheralClockEnableRegister<BaseAddress>,
 		public AHB3PeripheralClockEnableRegister<BaseAddress>,
 		public APB1PeripheralClockEnableRegister<BaseAddress>,
-		public APB2PeripheralClockEnableRegister<BaseAddress>
+		public APB2PeripheralClockEnableRegister<BaseAddress>,
+		public BackupDomainControlRegister<BaseAddress>
 	{
 	};
 }
