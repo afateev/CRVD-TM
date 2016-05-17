@@ -98,6 +98,9 @@
 // USB
 #include "Usb.h"
 
+// Real Time Clock (calendar)
+#include "Rtc.h"
+
 // Äנאיגונû ףסענמיסעג
 #include "Driver.h"
 

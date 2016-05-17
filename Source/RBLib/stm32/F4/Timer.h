@@ -479,8 +479,7 @@ namespace TimerImplementation
 	protected:
 		struct RegStruct
 		{
-			Core::RegisterValueType CounterValue		: 16;
-			Core::RegisterValueType 					: 16;
+			Core::RegisterValueType CounterValue		: 32;
 		};
 		
 		typedef Register<Address, RegStruct> Register;
@@ -594,8 +593,7 @@ namespace TimerImplementation
 	protected:
 		struct RegStruct
 		{
-			Core::RegisterValueType AutoReloadValue		: 16;
-			Core::RegisterValueType 					: 16;
+			Core::RegisterValueType AutoReloadValue		: 32;
 		};
 		
 		typedef Register<Address, RegStruct> Register;
