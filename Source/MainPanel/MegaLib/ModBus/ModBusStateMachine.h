@@ -56,6 +56,8 @@ class ModBusMasterStateMachine
 public:
 	typedef Rblib::CallbackWrapper<> OnTxCompleteCallbackType;
 	static OnTxCompleteCallbackType OnTxCompleteCallback;
+	
+	static bool WaitLastByteTx;
 protected:
 	enum State
 	{
@@ -63,12 +65,14 @@ protected:
 		StateReady,			// ничего не делаем, готовы к отправке
 		StateWrite,			// запись данных в Uart
 		StateWaitWriteEnd,	// ожидание, пока данные отправ€тс€
+		StateWaitWriteLastByte,	// ожидание, пока данные отправ€тс€
 		StateWaitRead,		// ожидание приема данных и / или таймаута (~ 3.5 байта)
 		StateRead			// вычитывание данных
 	};
 	
 	static volatile State _state;
 	static TimeoutDetector _packetDetector;		// детектор таймаута приема
+	static TimeoutDetector _lastByteDetector;	// детектор окончани€ отправки последнего байта
 	static unsigned char _buffer[BufferSize];	// буфер л€ приема и отправки
 	static unsigned int RequestSize;			// размер запроса (данные в буфере)
 	static unsigned int ResponseSize;			// размер ответа (данные в буфере)
@@ -80,6 +84,8 @@ public:
 		Uart::OnRead = OnRead;
 		_packetDetector.SetMaxCount(350);
 		_packetDetector.SetCallback(OnTimeOut);
+		_lastByteDetector.SetMaxCount(350);
+		_lastByteDetector.SetCallback(OnByteTimeOut);
 	}
 	
 	static bool IsReady()
@@ -95,6 +101,22 @@ public:
 			_packetDetector.SetMaxCount(70);
         else
             _packetDetector.SetMaxCount(500);
+		
+		if (baudrate < 1)
+		{
+			baudrate = 1;
+		}
+		float oneBitTime = 1.0 / baudrate;
+		float oneByteTime = oneBitTime * 12; // 12 бит в байте, включа€ старт четность стопы
+		float ticksPerByte = 10000.0 * oneByteTime;	// тики от таймера 10 к√ц
+		int ticksPerByteInt = (int)ticksPerByte;
+		// меньше не целесообразно, слишком часто прерывани€ будут
+		if (ticksPerByteInt < 10)
+		{
+			ticksPerByteInt = 10;
+		}
+		
+		_lastByteDetector.SetMaxCount(ticksPerByteInt);
     }
     
 	static void SendRequest(unsigned char *data, unsigned int dataLen)
@@ -120,6 +142,10 @@ public:
 	static void PacketTimeoutDetectorTick()
 	{
 		_packetDetector.Tick();
+		if (StateWaitWriteLastByte == _state)
+		{
+			_lastByteDetector.Tick();
+		}
 	}
 	
 	static void Run()
@@ -149,6 +175,11 @@ public:
 				// ждЄм пока Uart вызовет OnWriteEnd
 			}
 			break;
+		case StateWaitWriteLastByte:
+			{
+				// ждЄм пока _lastByteDetector вызовет OnByteTimeOut
+			}
+			break;
 		case StateWaitRead:
 			{
 				// ждЄм пока _packetDetector вызовет OnTimeOut
@@ -175,9 +206,16 @@ public:
 			_packetDetector.ResetCounter();
 			//Gpio::_D::SetOutputPin(2);
 			//Gpio::_D::SetBit(2);
-			_state = StateWaitRead;
-			
-			OnTxCompleteCallback();
+			if (WaitLastByteTx)
+			{
+				_lastByteDetector.ResetCounter();
+				_state = StateWaitWriteLastByte;
+			}
+			else
+			{
+				_state = StateWaitRead;
+				OnTxCompleteCallback();
+			}
 		}
 	}
 	static void OnRead(unsigned int nextByte)
@@ -202,6 +240,16 @@ public:
 			_state = StateRead;
 	}
 	
+	static void OnByteTimeOut()
+	{
+		_lastByteDetector.ResetCounter();
+		if (StateWaitWriteLastByte == _state)
+		{
+			_state = StateWaitRead;
+			OnTxCompleteCallback();
+		}
+	}
+	
 	// check CRC is ok
 	static bool CrcOk(unsigned char *data, unsigned int len)
 	{
@@ -223,6 +271,9 @@ public:
 };
 
 template<class Uart, unsigned int BufferSize>
+bool ModBusMasterStateMachine<Uart, BufferSize>::WaitLastByteTx = false;
+
+template<class Uart, unsigned int BufferSize>
 ModBusMasterStateMachine<Uart, BufferSize>::OnTxCompleteCallbackType ModBusMasterStateMachine<Uart, BufferSize>::OnTxCompleteCallback;
 
 template<class Uart, unsigned int BufferSize>
@@ -231,6 +282,9 @@ ModBusMasterStateMachine<Uart, BufferSize>::_state = ModBusMasterStateMachine<Ua
 
 template<class Uart, unsigned int BufferSize>
 TimeoutDetector ModBusMasterStateMachine<Uart, BufferSize>::_packetDetector;
+
+template<class Uart, unsigned int BufferSize>
+TimeoutDetector ModBusMasterStateMachine<Uart, BufferSize>::_lastByteDetector;
 
 template<class Uart, unsigned int BufferSize>
 unsigned char ModBusMasterStateMachine<Uart, BufferSize>::_buffer[BufferSize];
