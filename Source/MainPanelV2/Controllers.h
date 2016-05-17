@@ -19,7 +19,6 @@ class MainComPort
 typedef ModBusMasterStateMachine<Drivers::Board::MainComPort, 256> 		ModBusState;
 typedef DriveController<ModBusState, 0x01, 0x02, OscFileFormat::OscRecordSize> 	PrimaryController;
 typedef DriveController<ModBusState, 0x02, 0x01, OscFileFormat::OscRecordSize> 	ReserveController;
-typedef InsulationControl<ModBusState, 0x01> 		InsulationController;
 typedef ControllerDiagnostic<ModBusState, 0x01, 1, 17>	MainControllerDiagnostic;
 typedef ControllerDiagnostic<ModBusState, 0x02, 1, 17>	ReservControllerDiagnostic;
 typedef ControllerDiagnostic<ModBusState, 0x03, 1, 17>	ControllerDiagnosticTemperature;
@@ -42,7 +41,7 @@ public:
 };
 
 
-typedef PortScanner<Drivers::Board::PortScanerConnection, PrimaryController, ReserveController, MainControllerDiagnostic, ReservControllerDiagnostic, ControllerDiagnosticTemperature, InsulationController> portScanner;
+typedef PortScanner<Drivers::Board::PortScanerConnection, PrimaryController, ReserveController, MainControllerDiagnostic, ReservControllerDiagnostic, ControllerDiagnosticTemperature> portScanner;
 
 typedef DriveEventsGenerator<ActiveDriveControllerParams, Events> DriveEvets;
 

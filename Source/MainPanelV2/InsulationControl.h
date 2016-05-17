@@ -35,6 +35,7 @@ public:
 				if (ModBus::IsReady())
 				{
 					ModBus::ChangeSpeed(Config::MainComPortClockSourceFrequency, 9600);
+					ModBus::WaitLastByteTx = false;
                     unsigned int requestSize = ModBusMaster::BuildReadHoldingRegisters(_request, _address, 1, 10);
 					ModBus::SendRequest(_request, requestSize);
 					_state = StateWait;

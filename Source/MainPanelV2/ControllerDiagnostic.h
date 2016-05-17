@@ -37,6 +37,7 @@ public:
 				if (ModBus::IsReady())
 				{
 					ModBus::ChangeSpeed(Config::MainComPortClockSourceFrequency, 9600);
+					ModBus::WaitLastByteTx = true;
 					unsigned char address = BusAddres;
                     unsigned int requestSize = ModBusMaster::BuildReadHoldingRegisters(_request, address, FirstReg, RegCount);
 					ModBus::OnTxCompleteCallback = OnTxCompleteCallback;
@@ -94,6 +95,16 @@ public:
 			break;
 		}
 		return StateComplete == _state;
+	}
+	
+	static unsigned char GetAddress()
+	{
+		return BusAddres;
+	}
+	
+	static void GetAddress(unsigned char &value)
+	{
+		value = GetAddress();
 	}
 	
 	static unsigned short GetRegValue(unsigned char reg)

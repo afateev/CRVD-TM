@@ -25,7 +25,7 @@ void GetMainWindowDisplayData(MainWindowDisplayData &displayData)
 	displayData.ActiveDriveController.P = ActiveDriveControllerParams::GetP();
 	displayData.ActiveDriveController.CosPhi = ActiveDriveControllerParams::GetCosPhi();
 	displayData.ActiveDriveController.Q = ActiveDriveControllerParams::GetQ();
-	displayData.InsulationController.RIz = InsulationController::GetRegValue(10);
+	//displayData.InsulationController.RIz = InsulationController::GetRegValue(10);
 	displayData.ActiveDriveController.FlagCosControl = ActiveDriveControllerParams::GetFlagCosControl();
 	displayData.ActiveDriveController.FlagRControl = ActiveDriveControllerParams::GetFlagRControl();
 	Events::GetLastEventDescription(&displayData.Events.LastEventTime, &displayData.Events.LastEventText, &displayData.Events.LastEventParamText);
@@ -47,7 +47,7 @@ static void OnKiloHertzTimerTick()
 	
 	static unsigned int portScannerCnt = 0;
 	static unsigned int oscGetterCnt = 0;
-	static unsigned int insulationControlCnt = 0;
+	static unsigned int diagnosticCnt = 0;
 	
 	if (portScannerCnt >= 0)
 	{
@@ -83,21 +83,18 @@ static void OnKiloHertzTimerTick()
 			}
 		}*/
 		
-		if (insulationControlCnt >= Drivers::Board::KiloHertzTickFrequency)
+		portScanner::SkipDiagnostic = diagnosticCnt > 0;
+		if (diagnosticCnt < 100)
 		{
-			portScanner::SkipInsulationControl = false; 
-			insulationControlCnt = 0;
-		}
-		
-		insulationControlCnt++;
-		
-		if (!portScanner::SkipInsulationControl)
-		{
-			portScanner::SkipInsulationControl = portScanner::RunCountInsulationControl > 0;
+			if (portScanner::RunCountDiagnostic > 0)
+			{
+				diagnosticCnt++;
+			}
 		}
 		else
 		{
-			portScanner::RunCountInsulationControl = 0;
+			portScanner::RunCountDiagnostic = 0;
+			diagnosticCnt = 0;
 		}
 		
 		portScanner::Run();
@@ -230,13 +227,14 @@ void GetModbusAddress(unsigned char &address)
 
 void GetRegisterValue(unsigned short reg, unsigned short &val)
 {
+	/*
 	if (reg >= 200 && reg < 201 )
 	{
 		// контроль изоляции
 		// 10 - й мапится на 200-й
 		val = InsulationController::GetRegValue(reg);
 	}
-	else
+	else*/
 	{
 		// активный регулятор
 		val = ActiveDriveControllerParams::GetRegValue(reg);

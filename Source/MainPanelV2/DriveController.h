@@ -276,6 +276,7 @@ public:
 				if (ModBus::IsReady())
 				{
                     ModBus::ChangeSpeed(Config::MainComPortClockSourceFrequency, 115200);
+					ModBus::WaitLastByteTx = false;
 										
 					if (_regRequestCount > 0)
 					{

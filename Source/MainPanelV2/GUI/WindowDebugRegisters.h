@@ -20,8 +20,10 @@ public:
 	GetRegValueCallbackType PrimaryControllerGetRegValueCallback;
 	GetAddressCallbackType ReserveControllerGetAddressCallback;
 	GetRegValueCallbackType ReserveControllerGetRegValueCallback;
-	GetAddressCallbackType InsulationControllerGetAddressCallback;
-	GetRegValueCallbackType InsulationControllerGetRegValueCallback;
+	GetAddressCallbackType PrimaryDiagnosticGetAddressCallback;
+	GetRegValueCallbackType PrimaryDiagnosticGetRegValueCallback;
+	GetAddressCallbackType ReserveDiagnosticGetAddressCallback;
+	GetRegValueCallbackType ReserveDiagnosticGetRegValueCallback;
 public:
 	virtual void Draw()
 	{
@@ -32,10 +34,12 @@ public:
 		PrimaryControllerGetAddressCallback(primaryControllerAddress);
 		unsigned char reserveControllerAddress = 0xFF;
 		ReserveControllerGetAddressCallback(reserveControllerAddress);
-		unsigned char insulationControllerAddress = 0xFF;
-		InsulationControllerGetAddressCallback(insulationControllerAddress);
+		unsigned char primaryDiagnosticControllerAddress = 0xFF;
+		PrimaryDiagnosticGetAddressCallback(primaryDiagnosticControllerAddress);
+		unsigned char reserveDiagnosticControllerAddress = 0xFF;
+		ReserveDiagnosticGetAddressCallback(reserveDiagnosticControllerAddress);
 		
-		len = sprintf(str, "Ðåã. ÎÐÂ 0x%2.2X ÐÐÂ 0x%2.2X ÀÐÂ ---- ÊÈ  0x%2.2X ", primaryControllerAddress, reserveControllerAddress, insulationControllerAddress);
+		len = sprintf(str, "Ðåã. ÎÐÂ 0x%2.2X ÐÐÂ 0x%2.2X ÄÎ  0x%2.2X ÄÐ  0x%2.2X ", primaryControllerAddress, reserveControllerAddress, primaryDiagnosticControllerAddress, reserveDiagnosticControllerAddress);
 		display.MoveCursorTo(0, 0);
 		display.WriteLine(str, len);
 		
@@ -75,22 +79,15 @@ public:
 			display.MoveCursorTo(14, 16 * i);
 			display.WriteLine(str, len);
 			
-			len = sprintf(str, "[------]");
-			//len = sprintf(str, "[ %5d]", xxx::GetRegValue(i));
+			regValue = 0xFFFF;
+			PrimaryDiagnosticGetRegValueCallback(i, regValue);
+			len = sprintf(str, "[ %5d]", regValue);
 			display.MoveCursorTo(23, 16 * i);
 			display.WriteLine(str, len);
 			
 			regValue = 0xFFFF;
-			InsulationControllerGetRegValueCallback(i, regValue);
-			
-			if (i >= 1 && i <= 10)
-			{
-				len = sprintf(str, "[ %5d]", regValue);
-			}
-			else
-			{
-				len = sprintf(str, "[------]");
-			}
+			ReserveDiagnosticGetRegValueCallback(i, regValue);
+			len = sprintf(str, "[ %5d]", regValue);
 			display.MoveCursorTo(32, 16 * i);
 			display.WriteLine(str, len);				
 		}

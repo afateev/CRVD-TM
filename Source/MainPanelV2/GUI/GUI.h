@@ -75,9 +75,9 @@ MenuItem menuSetupNetwork("Сетевой обмен");
 
 MenuItem menuDiagnosticMain("Основной", ShowWindow<wndIdDiagnosticMain>);
 MenuItem menuDiagnosticReserv("Резервный", ShowWindow<wndIdDiagnosticReserv>);
-MenuItem menuDiagnosticTemperature("Температура", ShowWindow<wndIdDiagnosticTemperature>);
-MenuItem menuDiagnosticAnalogOutputs("Аналоговые выходы", ShowWindow<wndIdDiagnosticAnalogOutputs>);
-MenuItem menuDiagnosticLinkStatus("Состояние связи", ShowWindow<wndIdDiagnosticLinkStatus>);
+//MenuItem menuDiagnosticTemperature("Температура", ShowWindow<wndIdDiagnosticTemperature>);
+//MenuItem menuDiagnosticAnalogOutputs("Аналоговые выходы", ShowWindow<wndIdDiagnosticAnalogOutputs>);
+//MenuItem menuDiagnosticLinkStatus("Состояние связи", ShowWindow<wndIdDiagnosticLinkStatus>);
 
 //MenuItem menuControllerNominalStatorCurrent("Номинальный ток статора", ShowWindow<wndIdControllerNominalStatorCurrent>, GetEditingValueString<wndIdControllerNominalStatorCurrent>);
 //MenuItem menuControllerRotorCurrentMax("I ротора максимальное (А)", ShowWindow<wndIdControllerRotorCurrentMax>, GetEditingValueString<wndIdControllerRotorCurrentMax>);
@@ -94,8 +94,8 @@ WindowResetOperatingTime<Display, display> wndResetOperatingTime(&menuBigFont);
 typedef WindowGraph<Display, display, Drivers::DrawContextType, &Drivers::DrawContext> WindowGraphType;
 WindowGraphType wndGraph;
 WindowOscList<Display, display, OscGet, OscFileFormat::OscFileDescription, DesctopType, &desctop, WindowGraphType, &wndGraph, wndIdGraph> wndOscList;
-WindowDiagnosticRegulator<Display, display> wndDiagnosticRegulatorMain;
-WindowDiagnosticRegulator<Display, display> wndDiagnosticRegulatorReserv;
+WindowDiagnosticRegulator<Display, display, true> wndDiagnosticRegulatorMain;
+WindowDiagnosticRegulator<Display, display, false> wndDiagnosticRegulatorReserv;
 
 void OnWindowClose()
 {
@@ -123,8 +123,8 @@ void MenuInit()
 	menuListRoot.Add(&menuControllerSetup);
 	menuListRoot.Add(&menuIndicationSetup);
 	menuListRoot.Add(&menuDiagnostic);
-	menuListRoot.Add(&menuDebugRegisters);
-	menuListRoot.Add(&menuMainScreen);
+	//menuListRoot.Add(&menuDebugRegisters);
+	//menuListRoot.Add(&menuMainScreen);
 	//menuListRoot.Add(&menuHideAll);
 	
 	menuListSystemSetup.Add(&menuSetupDateTime);
@@ -139,9 +139,10 @@ void MenuInit()
 	
 	menuListDiagnostic.Add(&menuDiagnosticMain);
 	menuListDiagnostic.Add(&menuDiagnosticReserv);
-	menuListDiagnostic.Add(&menuDiagnosticTemperature);
-	menuListDiagnostic.Add(&menuDiagnosticAnalogOutputs);
-	menuListDiagnostic.Add(&menuDiagnosticLinkStatus);
+	//menuListDiagnostic.Add(&menuDiagnosticTemperature);
+	//menuListDiagnostic.Add(&menuDiagnosticAnalogOutputs);
+	//menuListDiagnostic.Add(&menuDiagnosticLinkStatus);
+	menuListDiagnostic.Add(&menuDebugRegisters);
 		
 	mainMenu.SetRoot(&menuListRoot);
 }
@@ -157,8 +158,12 @@ void DesctopInit()
 	wndDebugRegisters.PrimaryControllerGetRegValueCallback = PrimaryController::GetRegValue;
 	wndDebugRegisters.ReserveControllerGetAddressCallback = ReserveController::GetAddress;
 	wndDebugRegisters.ReserveControllerGetRegValueCallback = ReserveController::GetRegValue;
-	wndDebugRegisters.InsulationControllerGetAddressCallback = InsulationController::GetAddress;
-	wndDebugRegisters.InsulationControllerGetRegValueCallback = InsulationController::GetRegValue;
+	wndDebugRegisters.PrimaryDiagnosticGetAddressCallback = MainControllerDiagnostic::GetAddress;
+	wndDebugRegisters.PrimaryDiagnosticGetRegValueCallback = MainControllerDiagnostic::GetRegValue;
+	wndDebugRegisters.ReserveDiagnosticGetAddressCallback = ReservControllerDiagnostic::GetAddress;
+	wndDebugRegisters.ReserveDiagnosticGetRegValueCallback = ReservControllerDiagnostic::GetRegValue;
+	//wndDebugRegisters.InsulationControllerGetAddressCallback = InsulationController::GetAddress;
+	//wndDebugRegisters.InsulationControllerGetRegValueCallback = InsulationController::GetRegValue;
 	wndEvents.SetOnClose(OnWindowClose);
 	wndConfigSystemDateTime.SetOnClose(OnWindowClose);
 	wndResetOperatingTime.SetOnClose(OnWindowClose);

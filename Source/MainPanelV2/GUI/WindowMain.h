@@ -42,7 +42,7 @@ public:
 			OperatingTime = 0;
 		}
 	};
-	
+	/*
 	struct InsulationControllerDataStruct
 	{
 		unsigned int RIz;
@@ -51,7 +51,7 @@ public:
 		{
 			RIz = 0;
 		}
-	};
+	};*/
 	
 	struct EventsDataStruct
 	{
@@ -68,7 +68,7 @@ public:
 	};
 public:
 	ActiveDriveControllerDataStruct ActiveDriveController;
-	InsulationControllerDataStruct InsulationController;
+	//InsulationControllerDataStruct InsulationController;
 	EventsDataStruct Events;
 };
 
@@ -109,7 +109,7 @@ public:
 		PrintCosFi(displayData.ActiveDriveController.CosPhi, displayData.ActiveDriveController.FlagEngineOn, displayData.ActiveDriveController.FlagHasProblem);
 		PrintPreact(displayData.ActiveDriveController.Q, displayData.ActiveDriveController.FlagEngineOn, displayData.ActiveDriveController.FlagHasProblem);
 		
-		PrintInsulationResistance(0, 16 + 1 + 32 + 1 + 16 * 6 + 8, displayData.InsulationController.RIz);
+		//PrintInsulationResistance(0, 16 + 1 + 32 + 1 + 16 * 6 + 8, displayData.InsulationController.RIz);
 		
 		PrintMode(20, 16 + 1 + 32 + 1 + 16 * 6 + 8, displayData.ActiveDriveController.FlagCosControl, displayData.ActiveDriveController.FlagRControl);
 		
