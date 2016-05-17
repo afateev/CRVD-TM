@@ -54,10 +54,8 @@ public:
 		case StateInit:
 			// DEC0
 			ControlPort::SetMode(_contolPin0, ControlPort::ModeOutput);
-			ControlPort::SetConfig(_contolPin0, ControlPort::ConfigOutputPushPull);
 			// DEC1
 			ControlPort::SetMode(_contolPin1, ControlPort::ModeOutput);
-			ControlPort::SetConfig(_contolPin1, ControlPort::ConfigOutputPushPull);
 			Next();
 			break;
 		case StateScanPrimary:

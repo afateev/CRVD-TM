@@ -153,7 +153,7 @@ public:
 					
 					if (hdr.Length > 0)
 					{
-						time_t centerTime = Rtc::GetTime();
+						time_t centerTime = Rblib::Rtc::GetTime();
 						// скорректируем реальное время центра
 						unsigned short curOscPos = ActiveDriveControllerParams::GetOscCurPos();
 						unsigned short elapsed = MarkersDelta(centerPos, curOscPos);

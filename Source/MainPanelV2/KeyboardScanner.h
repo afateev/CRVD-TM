@@ -29,11 +29,9 @@ public:
 		for (unsigned char i = 0 ; i < 4; i ++)
 		{
 			Port::SetMode(_cols[i], Port::ModeInput);
-			Port::SetConfig(_cols[i], Port::ConfigInputPull);
-			Port::SetBit(_cols[i]);
+			Port::SetPullUpPullDownMode(_cols[i], Port::PullUpPullDownModePullUp);
 			Port::SetMode(_rows[i], Port::ModeInput);
-			Port::SetConfig(_rows[i], Port::ConfigInputFloating);
-			Port::ClearBit(_rows[i]);
+			Port::SetPullUpPullDownMode(_rows[i], Port::PullUpPullDownModeNone);
 		}
 	}
 	
@@ -42,7 +40,6 @@ public:
 		static unsigned int pause = 0;
 		
 		Port::SetMode(_rows[_row], Port::ModeOutput);
-		Port::SetConfig(_rows[_row], Port::ConfigOutputPushPull);
 		bool curState = Port::Read(_cols[_col]);
 		
 		if (_prevState[_row][_col] != curState)
@@ -79,7 +76,7 @@ public:
 		_prevState[_row][_col] = curState;
 		
 		Port::SetMode(_rows[_row], Port::ModeInput);
-		Port::SetConfig(_rows[_row], Port::ConfigInputFloating);
+		Port::SetPullUpPullDownMode(_rows[_row], Port::PullUpPullDownModeNone);
 
 		_col++;
 		if (_col >= 4)

@@ -37,13 +37,15 @@ void GetMainWindowDisplayData(MainWindowDisplayData &displayData)
 
 static void OnTenKiloHertzTimerTick()
 {
+	//Drivers::Board::Gpio::B::SetBit(0);
 	ModBusState::PacketTimeoutDetectorTick();
 	Drivers::Rs485.Tick(Drivers::Board::TenKiloHertzTickFrequency);
+	//Drivers::Board::Gpio::B::ClearBit(0);
 }
 
 static void OnKiloHertzTimerTick()
 {
-	Drivers::Board::Gpio::A::SetBit(8);
+	//Drivers::Board::Gpio::B::SetBit(0);
 	
 	static unsigned int portScannerCnt = 0;
 	static unsigned int oscGetterCnt = 0;
@@ -107,6 +109,8 @@ static void OnKiloHertzTimerTick()
 	display.Tick();
 	keyboardScanner::Tick();
 	ActiveDriveControllerParams::Tick();
+	
+	//Drivers::Board::Gpio::B::ClearBit(0);
 }
 
 char lastKey = 0;
@@ -195,6 +199,8 @@ void OnRs485DataReceived(unsigned char *data, int count)
 
 void ModbusSlaveTimerTick()
 {
+	Drivers::Board::Gpio::B::SetBit(0);
+	
 	if (_rxRs485Count)
 	{
 		int writeCount = ModbusSlave.ProcessFrame(inputBufferRs485, _rxRs485Count, outputBufferRs485);
@@ -218,6 +224,8 @@ void ModbusSlaveTimerTick()
 		
 		Drivers::Board::Rs485Init(rs485Boudrate, rs485ParityEnable, rx485ParityEven);
 	}
+	
+	Drivers::Board::Gpio::B::ClearBit(0);
 }
 
 void GetModbusAddress(unsigned char &address)
@@ -390,7 +398,7 @@ int main()
 	OscGet::Init(OscFilesRead, OscFilesWrite);
 	
 	// начали работу
-	Event e(Rtc::GetTime(), EventProgramStart);
+	Event e(Rblib::Rtc::GetTime(), EventProgramStart);
 	Events::Push(e);
 	
 	while(1)

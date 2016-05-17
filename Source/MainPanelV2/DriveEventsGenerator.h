@@ -113,7 +113,7 @@ protected:
 public:
 	static void Run()
 	{
-		time_t curTime = Rtc::GetTime();
+		time_t curTime = Rblib::Rtc::GetTime();
 		
 		// нет данных, нечего делать
 		if (_stateUndefined && !ActiveDriveControllerParams::HasParams())

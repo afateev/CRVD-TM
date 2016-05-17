@@ -102,7 +102,7 @@ public:
 		display.MoveCursorTo(0, 0);
 		display.WriteLine("ЦРВД-ТМ");
 		
-		PrintDateTime(40 - 19, 0 , Rtc::GetTime());
+		PrintDateTime(40 - 19, 0 , Rblib::Rtc::GetTime());
 		PrintActiveController(0, 16 + 8, displayData.ActiveDriveController.IsPrimaryActive ? "основной регулятор" : "резервный регулятор");
 		
 		PrintPact(displayData.ActiveDriveController.P, displayData.ActiveDriveController.FlagEngineOn, displayData.ActiveDriveController.FlagHasProblem);

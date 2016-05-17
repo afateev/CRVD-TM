@@ -36,30 +36,47 @@ namespace MainPanel
 				
 				// PLL от HSE
 				Rcc::SetPLLSource(Rcc::PLLSourceHSE);
-				// HSE без деления
-				Rcc::SetPLLHSEDivider(Rcc::HSEDiv1);
-				// PLL = 72 MHz = 8 * 9
-				Rcc::SetPLLMultiplicationFactor(Rcc::PLLMul9);
+				
+				// VCO input frequency = PLL input clock frequency / PLLM
+				// It is recommended to select a frequency of 2 MHz
+				// VCO input frequency = 8 / 4 = 2 MHz
+				Rcc::SetPLLM(4);
+				
+				// VCO output frequency = VCO input frequency * PLLN with 50 <= PLLN <= 432
+				// The software has to set these bits correctly to ensure that the VCO output frequency is between 100 and 432 MHz
+				// VCO output frequency = 2 * 168 = 336 MHz
+				Rcc::SetPLLN(168);
+				
+				// PLL output clock frequency = VCO frequency / PLLP
+				// PLL output clock frequency = 336 / 2 = 168 MHz
+				Rcc::SetPLLP(2);
+				
+				// USB OTG FS clock frequency = VCO frequency / PLLQ with 2 <= PLLQ <= 15
+				// USB OTG FS clock frequency = 336 / 7 = 48 MHz
+				Rcc::SetPLLQ(7);
+				
 				// Включаем
 				Rcc::PLLEnable();
+				
 				while(!Rcc::PLLReady())
 				{
 					;
 				}
 				
-				// Two wait states, if 48 MHz < SYSCLK <= 72 MHz
-				FlashMemoryController::SetLatency(2);
-				
 				// max 36 MHz
-				Rcc::SetAPB1Prescaler(Rcc::APB1PrescalerHCLKDiv2);
+				// 168 / 8 = 21 MHz
+				Rcc::SetAPB1Prescaler(Rcc::APB1PrescalerAHBDiv8);
+				
+				// max 72 MHz
+				// 168 / 8 = 42 MHz
+				Rcc::SetAPB2Prescaler(Rcc::APB2PrescalerAHBDiv4);
+				
+				// 5 wait states, if 150 MHz < SYSCLK <= 168 MHz
+				FlashMemoryController::SetLatency(5);
 				
 				// Ядро от PLL
 				Rcc::SetSystemClock(Rcc::SystemClockPLL);
 				
-				// Вывод тактирования для проверки
-				Rcc::SetClockOutput(Rcc::ClockOutputPllDiv2);
-				
-				Rcc::EnableClockAfio();
 				Rcc::EnableClockPortA();
 				Rcc::EnableClockPortB();
 				Rcc::EnableClockPortC();
@@ -73,11 +90,25 @@ namespace MainPanel
 				Rcc::EnableClockUsart2();
 				Rcc::EnableClockUsart3();
 				Rcc::EnableClockSpi3();
+				Rcc::EnableClockPowerInterface();
+				
+				if (!Rcc::IsRtcEnabled())
+				{
+					PowerControl::DisableBackupDomainWriteProtection(true);
+					Rcc::LSEEnable();
+					unsigned int waitTimeOut = 1000;
+					while(!Rcc::LSEReady() && waitTimeOut > 0)
+					{
+						waitTimeOut--;
+					}
+					Rcc::SetRtcSource(Rcc::RtcSourceLSE);
+					Rcc::RtcEnable();
+					PowerControl::DisableBackupDomainWriteProtection(false);
+				}
 				
 				//Вывод тактирования
 				Gpio::A::SetMode(8, Gpio::A::ModeOutput);
 				//Gpio::A::SetConfig(8, Gpio::A::ConfigOutputAlternatePushPull);
-				Gpio::A::SetConfig(8, Gpio::A::ConfigOutputPushPull);
 				//Gpio::A::SetBit(8);
 				Gpio::A::ClearBit(8);
 			}
@@ -112,7 +143,16 @@ namespace MainPanel
 				for (int i = 0; i < 16; i++)
 				{
 					Port::SetMode(i, Port::ModeOutput);
-					Port::SetConfig(i, Port::ConfigOutputPushPull);
+				}
+				
+				for (int i = 0; i < 16; i++)
+				{
+					for (int j = 0; j < 16; j++)
+					{
+						Port::ClearBit(j);
+					}
+					Port::SetBit(i);
+					
 				}
 			}
 		};
@@ -154,14 +194,14 @@ namespace MainPanel
 			Clock::Init();
 			DisplayConnection::Init();
 			
-			TenKiloHertzTimer::SetPrescaler(72);
+			TenKiloHertzTimer::SetPrescaler(42 * 2);
 			TenKiloHertzTimer::SetMaxCount(1000000 / TenKiloHertzTickFrequency);
 			TenKiloHertzTimer::Start();
 			TenKiloHertzTimer::ClearUpdateInterruptFlag();
 			TenKiloHertzTimer::EnableUpdateInterrupt();
 			Nvic::InterruptEnable(Nvic::InterruptVector_TIM1_UP);
 			
-			KiloHertzTimer::SetPrescaler(72);
+			KiloHertzTimer::SetPrescaler(21 * 2);
 			KiloHertzTimer::SetMaxCount(1000000 / KiloHertzTickFrequency);
 			KiloHertzTimer::Start();
 			KiloHertzTimer::ClearUpdateInterruptFlag();
@@ -169,7 +209,7 @@ namespace MainPanel
 			Nvic::InterruptEnable(Nvic::InterruptVector_TIM2);
 			Nvic::SetInterruptPriority(Nvic::InterruptVector_TIM2, 2);
 			
-			GuiTimer::SetPrescaler(720);
+			GuiTimer::SetPrescaler(210 * 2);
 			GuiTimer::SetMaxCount(100000 / GuiTickFrequency);
 			GuiTimer::Start();
 			GuiTimer::ClearUpdateInterruptFlag();
@@ -177,7 +217,7 @@ namespace MainPanel
 			Nvic::InterruptEnable(Nvic::InterruptVector_TIM3);
 			Nvic::SetInterruptPriority(Nvic::InterruptVector_TIM3, 4);
 			
-			ModbusSlaveTimer::SetPrescaler(720);
+			ModbusSlaveTimer::SetPrescaler(210 * 2);
 			ModbusSlaveTimer::SetMaxCount(100000 / ModbusSlaveFrequency);
 			ModbusSlaveTimer::Start();
 			ModbusSlaveTimer::ClearUpdateInterruptFlag();
@@ -185,11 +225,13 @@ namespace MainPanel
 			Nvic::InterruptEnable(Nvic::InterruptVector_TIM4);
 			Nvic::SetInterruptPriority(Nvic::InterruptVector_TIM4, 3);
 			
-			Gpio::D::SetMode(8, Gpio::D::ModeOutput);
-			Gpio::D::SetConfig(8, Gpio::D::ConfigOutputAlternatePushPull);
-			Afio::RemapUsart3(3);
+			//USART3 AF7
+			Gpio::D::SetMode(8, Gpio::D::ModeAlternate);
+			Gpio::D::SetAlternateFunctionNumber(8, 7);
+			Gpio::D::SetMode(9, Gpio::D::ModeAlternate);
+			Gpio::D::SetAlternateFunctionNumber(9, 7);
 			
-			MainComPort::Init(36000000, 9600, MainComPort::StopBits1, MainComPort::ParityNone);
+			MainComPort::Init(Config::MainComPortClockSourceFrequency, 9600, MainComPort::StopBits1, MainComPort::ParityNone);
 			//MainComPort::OnRead = OnUsartRead;
 			//MainComPort::OnWriteComplete = OnWriteComplete;
 			MainComPort::Enable();
@@ -198,32 +240,33 @@ namespace MainPanel
 			// 485
 			// RE/DE
 			Gpio::D::SetMode(7, Gpio::D::ModeOutput);
-			Gpio::D::SetConfig(7, Gpio::D::ConfigOutputPushPull);
 			Gpio::D::ClearBit(7);
-			// TX
-			Gpio::D::SetMode(5, Gpio::D::ModeOutput);
-			Gpio::D::SetConfig(5, Gpio::D::ConfigOutputAlternatePushPull);
-			Afio::RemapUsart2(1);
+			//USART3 AF7
+			Gpio::D::SetMode(5, Gpio::D::ModeAlternate);
+			Gpio::D::SetAlternateFunctionNumber(5, 7);
+			Gpio::D::SetMode(6, Gpio::D::ModeAlternate);
+			Gpio::D::SetAlternateFunctionNumber(6, 7);
 			Nvic::InterruptEnable(Nvic::InterruptVector_USART2);
 			Rs485Init(9600, false, false);
 			
-			// SPI3
+			// SPI3 AF6
 			// CLK as alternate output
-			Gpio::C::SetMode(10, Gpio::C::ModeOutput);
-			Gpio::C::SetConfig(10, Gpio::C::ConfigOutputAlternatePushPull);
+			Gpio::C::SetMode(10, Gpio::C::ModeAlternate);
+			Gpio::C::SetAlternateFunctionNumber(10, 6);
+			// MISO as alternate output
+			Gpio::C::SetMode(11, Gpio::C::ModeAlternate);
+			Gpio::C::SetAlternateFunctionNumber(11, 6);
 			// MOSI as alternate output
-			Gpio::C::SetMode(12, Gpio::C::ModeOutput);
-			Gpio::C::SetConfig(12, Gpio::C::ConfigOutputAlternatePushPull);
-			Afio::RemapSpi3(1);
+			Gpio::C::SetMode(12, Gpio::C::ModeAlternate);
+			Gpio::C::SetAlternateFunctionNumber(12, 6);
 			
 			// 485 Diagnostics Master
 			// RE/DE
 			Gpio::B::SetMode(7, Gpio::B::ModeOutput);
-			Gpio::B::SetConfig(7, Gpio::B::ConfigOutputPushPull);
 			Gpio::B::ClearBit(7);
 			
+			Gpio::B::SetMode(0, Gpio::B::ModeOutput);
 			Gpio::B::SetMode(1, Gpio::B::ModeOutput);
-			Gpio::B::SetConfig(1, Gpio::B::ConfigOutputPushPull);
 		}
 		
 		static void Rs485Init(int boudrate, bool parityEnable, bool parityEven)

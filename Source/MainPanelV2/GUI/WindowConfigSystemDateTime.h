@@ -142,7 +142,7 @@ public:
 	
 	virtual time_t GetDateTime()
 	{
-		time_t curTime = Rtc::GetTime();
+		time_t curTime = Rblib::Rtc::GetTime();
 		struct tm *timeinfo = localtime(&curTime);
 		
 		int year = _year.GetIntValue();
@@ -209,7 +209,7 @@ public:
 		display.MoveCursorTo(1, 48);
 		display.WriteLine("Текущее значение:");
 		
-		PrintCurTime(48 + 16, Rtc::GetTime());
+		PrintCurTime(48 + 16, Rblib::Rtc::GetTime());
 		
 		display.MoveCursorTo(1, 48 + 16 + 16 + 32);
 		display.WriteLine("Новое значение:");
@@ -281,7 +281,7 @@ public:
 	{
 		struct tm * timeinfo;
 		char str[20];
-		time_t curTime = Rtc::GetTime();
+		time_t curTime = Rblib::Rtc::GetTime();
 		timeinfo = localtime ( &curTime );
 		strftime (str, sizeof(str), "%d.%m.%Y %H:%M:%S", timeinfo);
 		
@@ -303,7 +303,9 @@ public:
 			if (13 == key)
 			{
 				time_t newTime = _newTime.GetDateTime();
-				Rtc::SetTime(newTime);
+				//PowerControl::DisableBackupDomainWriteProtection(true);
+				Rblib::Rtc::SetTime(newTime);
+				//PowerControl::DisableBackupDomainWriteProtection(false);
 				
 				WindowBase::Close();
 			}

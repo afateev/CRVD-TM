@@ -17,14 +17,11 @@ public:
 public:
 	static void Init()
 	{
-		// Ноги споддтяжкой
+		// Ноги сподтяжкой к питанию
 		Port::SetMode(Pin1, Port::ModeInput);
-		Port::SetConfig(Pin1, Port::ConfigInputPull);
+		Port::SetPullUpPullDownMode(Pin1, Port::PullUpPullDownModePullUp);
 		Port::SetMode(Pin2, Port::ModeInput);
-		Port::SetConfig(Pin2, Port::ConfigInputPull);
-		// к питанию
-		Port::SetBit(Pin1);
-		Port::SetBit(Pin2);
+		Port::SetPullUpPullDownMode(Pin2, Port::PullUpPullDownModePullUp);
 	}
 	
 	/*	Ниже функции проверки какой регулятор выбран
