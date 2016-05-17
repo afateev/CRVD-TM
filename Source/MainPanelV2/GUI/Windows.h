@@ -76,6 +76,8 @@ enum WindowId
     wndIdControllerUstCosChannel,					    // канал по cos
 	wndIdControllerUstAngleSetupDisplay,				// Установка угла (отображеие)
 	wndIdControllerUstEnergizingCurrentSetup,			// Установка I возбуждения
+	wndIdControllerEnergizingReactCurrentSetup,
+	wndIdControllerEnergizingReactPowerSetup,
     
 	wndIdIndicationStatorVoltageMinDisplay,
     wndIdIndicationStatorCurrentMinDisplay,

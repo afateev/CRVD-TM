@@ -26,7 +26,7 @@ void GetMainWindowDisplayData(MainWindowDisplayData &displayData)
 	displayData.ActiveDriveController.CosPhi = ActiveDriveControllerParams::GetCosPhi();
 	displayData.ActiveDriveController.Q = ActiveDriveControllerParams::GetQ();
 	//displayData.InsulationController.RIz = InsulationController::GetRegValue(10);
-	displayData.ActiveDriveController.FlagCosControl = ActiveDriveControllerParams::GetFlagCosControl();
+	displayData.ActiveDriveController.CosControl = ActiveDriveControllerParams::GetCosControl();
 	displayData.ActiveDriveController.FlagRControl = ActiveDriveControllerParams::GetFlagRControl();
 	Events::GetLastEventDescription(&displayData.Events.LastEventTime, &displayData.Events.LastEventText, &displayData.Events.LastEventParamText);
 	displayData.ActiveDriveController.FlagEngineOn = ActiveDriveControllerParams::GetFlagEngineOn();

@@ -99,6 +99,7 @@ protected:
 	static bool _stateUndefined;
 	static unsigned short _prevDriveState;
 	static unsigned short _prevProtectionState;
+	static int _prevControlState;
 	
 	enum ActiveController
 	{
@@ -219,6 +220,45 @@ public:
 			}
 		}
 		
+		int curControlState = ActiveDriveControllerParams::GetCosControl();
+		bool stateChanged = curControlState != _prevControlState;
+		if (stateChanged || _stateUndefined)
+		{
+			_prevControlState = curControlState;
+			Event e;
+			bool valid = true;
+			switch (curControlState)
+			{
+			case 1:
+				{
+					e = Event(0, EventRotorCurrentControl);	// по току ротора
+				}
+				break;
+			case 2:
+				{
+					e = Event(0, EventCosControl);	// по косинусу
+				}
+				break;
+			case 3:
+				{
+					e = Event(0, EventReactCurrentControl);	// по реакт току
+				}
+				break;
+			case 4:
+				{
+					e = Event(0, EventReactPowerControl);	// по реакт мощ
+				}
+				break;
+			default:
+				valid = false;
+			}
+			if (valid)
+			{
+				e.SetDt(curTime);
+				Events::Push(e);
+			}
+		}
+		
 		// разбираем регистр состояний
 		for (unsigned char i = 0; i < 16; i++)
 		{
@@ -252,29 +292,6 @@ public:
 							e = Event(0, EventForcingOff);	// выкл
 					}
 					break;
-				// ограничение минимального возбудения
-				case ActiveDriveControllerParams::SfOmv:
-					{
-						if (_stateUndefined)
-							break;
-						if (curState)
-							e = Event(0, EventOmvOn);	// вкл
-						else
-							e = Event(0, EventOmvOff);	// выкл
-					}
-					break;
-				// управление по cos или току ротора
-				case ActiveDriveControllerParams::SfCosControl:
-					{
-						// только если не ручное
-						if (_stateUndefined || ActiveDriveControllerParams::GetFlagRControl())
-							break;
-						if (curState)
-							e = Event(0, EventCosControl);	// по косинусу
-						else
-							e = Event(0, EventRotorCurrentControl);	// по току ротора
-					}
-					break;
 				// ручное управление
 				case ActiveDriveControllerParams::SfRControl:
 					{
@@ -285,10 +302,29 @@ public:
 						else
 						{
 							// если не ручное, то какое
-							if (ActiveDriveControllerParams::GetFlagCosControl())
-								e = Event(0, EventCosControl);	// по косинусу
-							else
-								e = Event(0, EventRotorCurrentControl);	// по току ротора
+							switch (ActiveDriveControllerParams::GetCosControl())
+							{
+							case 1:
+								{
+									e = Event(0, EventRotorCurrentControl);	// по току ротора
+								}
+								break;
+							case 2:
+								{
+									e = Event(0, EventCosControl);	// по косинусу
+								}
+								break;
+							case 3:
+								{
+									e = Event(0, EventReactCurrentControl);	// по реакт току
+								}
+								break;
+							case 4:
+								{
+									e = Event(0, EventReactPowerControl);	// по реакт мощ
+								}
+								break;
+							}
 						}
 					}
 					break;
@@ -375,6 +411,9 @@ unsigned short DriveEventsGenerator<ActiveDriveControllerParams, Events>::_prevD
 
 template<class ActiveDriveControllerParams, class Events>
 unsigned short DriveEventsGenerator<ActiveDriveControllerParams, Events>::_prevProtectionState = 0;
+
+template<class ActiveDriveControllerParams, class Events>
+int DriveEventsGenerator<ActiveDriveControllerParams, Events>::_prevControlState = 0;
 
 
 template<class ActiveDriveControllerParams, class Events>

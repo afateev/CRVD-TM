@@ -21,7 +21,7 @@ public:
 		float P;
 		float CosPhi;
 		float Q;
-		bool FlagCosControl;
+		int CosControl;
 		bool FlagRControl;
 		bool FlagEngineOn;
 		bool FlagHasProblem;
@@ -34,7 +34,7 @@ public:
 			P = 0.0;
 			CosPhi = 0.0;
 			Q = 0;
-			FlagCosControl = false;
+			CosControl = 0;
 			FlagRControl = false;
 			FlagEngineOn = false;
 			FlagHasProblem = false;
@@ -111,7 +111,7 @@ public:
 		
 		//PrintInsulationResistance(0, 16 + 1 + 32 + 1 + 16 * 6 + 8, displayData.InsulationController.RIz);
 		
-		PrintMode(20, 16 + 1 + 32 + 1 + 16 * 6 + 8, displayData.ActiveDriveController.FlagCosControl, displayData.ActiveDriveController.FlagRControl);
+		PrintMode(20, 16 + 1 + 32 + 1 + 16 * 6 + 8, displayData.ActiveDriveController.CosControl, displayData.ActiveDriveController.FlagRControl);
 		
 		PrintLastEvent(0, 16 + 1 + 32 + 1 + 16 * 6 + 32 + 8, displayData.Events.LastEventText, displayData.Events.LastEventTime, displayData.Events.LastEventParamText);
 		
@@ -250,7 +250,7 @@ public:
 		display.WriteLine(str, len);
 	}
 	
-	void PrintMode(unsigned int x, unsigned int y, bool cosFlag, bool rFlag)
+	void PrintMode(unsigned int x, unsigned int y, int mode, bool rFlag)
 	{
 		unsigned char len;
 		
@@ -262,8 +262,29 @@ public:
 		}
 		else
 		{
-			if (cosFlag)
-				len = sprintf(str, "     Канал - cosФ");
+			switch (mode)
+			{
+			case 1:
+				{
+					len = sprintf(str, "  Канал - ток ротора");
+				}
+				break;
+			case 2:
+				{
+					len = sprintf(str, "     Канал - cosФ");
+				}
+				break;
+			case 3:
+				{
+					len = sprintf(str, "    Канал - Iреакт");
+				}
+				break;
+			case 4:
+				{
+					len = sprintf(str, "    Канал - Qреакт");
+				}
+				break;
+			}
 		}
 		
 		display.MoveCursorTo(x, y + 3);

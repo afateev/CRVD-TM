@@ -209,9 +209,11 @@ CONTROLLER_PARAM_DECL(NominalRotorCurrent, " Iр номинальный, А   ", float, 3, 0,
 CONTROLLER_PARAM_DECL(StartRotorCurrent, " Iр пусковой, А      ", float, 4, 0, "%3.0f", 1)
 CONTROLLER_PARAM_DECL(RotorCurrentMax, " Iр макс, А          ", float, 3, 1, "%3.1f", 1)
 CONTROLLER_PARAM_DECL(RotorCurrentMin, " Iр мин, А           ", float, 3, 1, "%3.1f", 1)
-CONTROLLER_PARAM_DECL(CosChannel, "Канал по Cos         ", int, 0, 0, "%s", 1)
-CONTROLLER_PARAM_COS_DECL(AngleSetupDisplay, "Уставка по cosФ      ", float, 2, 2, "%2.2f", 1)
-CONTROLLER_PARAM_DECL(EnergizingCurrentSetup, "Уставка по Iротора, А", float, 3, 1, "%3.1f", 1)
+CONTROLLER_PARAM_DECL(CosChannel, "Канал регулирования                ", int, 1, 0, "%1d", 1)
+CONTROLLER_PARAM_DECL(EnergizingCurrentSetup, " 1 - Уставка по Iротора, А", float, 3, 1, "%3.1f", 1)
+CONTROLLER_PARAM_COS_DECL(AngleSetupDisplay, " 2 - Уставка по cosФ      ", float, 2, 2, "%2.2f", 1)
+CONTROLLER_PARAM_DECL(EnergizingReactCurrentSetup, " 3 - Уставка по Iреакт, А", float, 4, 0, "%4.0f", 1)
+CONTROLLER_PARAM_DECL(EnergizingReactPowerSetup, " 4 - Уставка по Qреакт, МВАр", float, 3, 1, "%3.1f", 1)
 CONTROLLER_PARAM_DECL(GlideSetup, "Уставка по скольжению, Гц", float, 1, 1, "%1.1f", 1)
 CONTROLLER_PARAM_DECL(GlideStart, "Пуск по скольжению   ", int, 0, 0, "%s", 1)
 //CONTROLLER_PARAM_DECL(H_ka_f_I0, "H_ka.f_I0            ", float, 3, 0, "%3.0f")
@@ -270,8 +272,10 @@ void ControllerParamsMenuEndEditorsInit()
     CONTROLLER_PARAM_INIT(RotorCurrentMax);
 	CONTROLLER_PARAM_INIT(RotorCurrentMin);
     CONTROLLER_PARAM_INIT(CosChannel);
-	CONTROLLER_PARAM_INIT(AngleSetupDisplay);
 	CONTROLLER_PARAM_INIT(EnergizingCurrentSetup);
+	CONTROLLER_PARAM_INIT(AngleSetupDisplay);
+	CONTROLLER_PARAM_INIT(EnergizingReactCurrentSetup);
+	CONTROLLER_PARAM_INIT(EnergizingReactPowerSetup);
 	CONTROLLER_PARAM_INIT(GlideSetup);
     CONTROLLER_PARAM_INIT(GlideStart);
 	//CONTROLLER_PARAM_INIT(H_ka_f_I0);

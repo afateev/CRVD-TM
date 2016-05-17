@@ -726,7 +726,7 @@ template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress
 unsigned char DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_regRequestCount = 0;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
-const RequestInfo DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::requests[2] = {RequestInfo(1, 15), RequestInfo(100, 65)};
+const RequestInfo DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::requests[2] = {RequestInfo(1, 15), RequestInfo(100, 69)};
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 bool DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_writeReg97 = false;
