@@ -41,6 +41,7 @@ namespace RtcImplementation
 			Core::RegisterValueType 			: 9;
 		};
 		
+		typedef Register<Address, Core::RegisterValueType> RegisterForWrite;
 		typedef Register<Address, RegStruct> Register;
 	public:
 		static int GetSeconds()
@@ -74,6 +75,19 @@ namespace RtcImplementation
 		{
 			return Register::Ptr()->PM;
 		}
+		
+		static void SetTimeValue(int hours, int minutes, int seconds)
+		{
+			RegStruct newVal;
+			newVal.HT = hours / 10;
+			newVal.HU = hours % 10;
+			newVal.MNT = minutes / 10;
+			newVal.MNU = minutes % 10;
+			newVal.ST = seconds / 10;
+			newVal.SU = seconds % 10;
+			
+			*RegisterForWrite::Ptr() = *((Core::RegisterValueType *)&newVal);
+		}
 	};
 	
 	// RTC date register (RTC_DR)
@@ -100,6 +114,7 @@ namespace RtcImplementation
 			Core::RegisterValueType 			: 8;
 		};
 		
+		typedef Register<Address, Core::RegisterValueType> RegisterForWrite;
 		typedef Register<Address, RegStruct> Register;
 	public:
 		static int GetDay()
@@ -133,6 +148,99 @@ namespace RtcImplementation
 		{
 			return Register::Ptr()->WDU;
 		}
+		
+		static void SetDateValue(int year, int month, int day)
+		{
+			RegStruct newVal;
+			newVal.YT = year / 10;
+			newVal.YU = year % 10;
+			newVal.MT = month / 10;
+			newVal.MU = month % 10;
+			newVal.DT = day / 10;
+			newVal.DU = day % 10;
+			
+			*RegisterForWrite::Ptr() = *((Core::RegisterValueType *)&newVal);
+		}
+	};
+	
+	// RTC initialization and status register (RTC_ISR)
+	template
+		<
+			Core::RegisterAddressType BaseAddress
+		>
+	class InitializationAndStatusRegister
+	{
+	public:
+		static const Core::RegisterAddressType AddressOffset = 0x0C;
+		static const Core::RegisterAddressType Address = BaseAddress + AddressOffset;
+	protected:
+		struct RegStruct
+		{
+			Core::RegisterValueType ALRAWF		: 1;
+			Core::RegisterValueType ALRBWF		: 1;
+			Core::RegisterValueType WUTWF		: 1;
+			Core::RegisterValueType SHPF		: 1;
+			Core::RegisterValueType INITS		: 1;
+			Core::RegisterValueType RSF			: 1;
+			Core::RegisterValueType INITF		: 1;
+			Core::RegisterValueType INIT		: 1;
+			Core::RegisterValueType ALRAF		: 1;
+			Core::RegisterValueType ALRBF		: 1;
+			Core::RegisterValueType WUTF		: 1;
+			Core::RegisterValueType TSF			: 1;
+			Core::RegisterValueType TSOVF		: 1;
+			Core::RegisterValueType TAMP1F		: 1;
+			Core::RegisterValueType TAMP2F		: 1;
+			Core::RegisterValueType 			: 1;
+			Core::RegisterValueType RECALPF		: 1;
+			Core::RegisterValueType 			: 15;
+		};
+		
+		typedef Register<Address, RegStruct> Register;
+	public:
+		static void WriteEnable(bool enable = true)
+		{
+			Register::Ptr()->INIT = enable;
+		}
+		
+		static bool IsWriteAllowed()
+		{
+			return Register::Ptr()->INITF;
+		}
+	};
+	
+	// RTC write protection register (RTC_WPR)
+	template
+		<
+			Core::RegisterAddressType BaseAddress
+		>
+	class WriteProtectionRegister
+	{
+	public:
+		static const Core::RegisterAddressType AddressOffset = 0x24;
+		static const Core::RegisterAddressType Address = BaseAddress + AddressOffset;
+	protected:
+		struct RegStruct
+		{
+			Core::RegisterValueType KEY			: 8;
+			Core::RegisterValueType 			: 24;
+		};
+		
+		typedef Register<Address, RegStruct> Register;
+	public:
+		static void WriteProtectionEnable(bool enable = true)
+		{
+			if (enable)
+			{
+				Register::Ptr()->KEY = 0;
+			}
+			else
+			{
+				Register::Ptr()->KEY = 0xCA;
+				Register::Ptr()->KEY = 0x53;
+			}
+			
+		}
 	};
 	
 	template
@@ -142,11 +250,15 @@ namespace RtcImplementation
 	class Rtc :
 		public IdObjectBase<IdObj>,
 		public TimeRegister<BaseAddress>,
-		public DateRegister<BaseAddress>
+		public DateRegister<BaseAddress>,
+		public InitializationAndStatusRegister<BaseAddress>,
+		public WriteProtectionRegister<BaseAddress>
 	{
 	public:
 		typedef TimeRegister<BaseAddress> TimeRegister;
 		typedef DateRegister<BaseAddress> DateRegister;
+		typedef InitializationAndStatusRegister<BaseAddress> InitializationAndStatusRegister;
+		typedef WriteProtectionRegister<BaseAddress> WriteProtectionRegister;
 	public:
 		static unsigned int GetTime()
 		{
@@ -175,7 +287,31 @@ namespace RtcImplementation
 		
 		static void SetTime(unsigned int time)
 		{
+			WriteProtectionRegister::WriteProtectionEnable(false);
+			InitializationAndStatusRegister::WriteEnable(true);
 			
+			unsigned int waitTimeOut = 1000;
+			while(!InitializationAndStatusRegister::IsWriteAllowed() && waitTimeOut > 0)
+			{
+				waitTimeOut--;
+			}
+			
+			struct tm *timeinfo = localtime(&time);
+			/*
+			DateRegister::SetYear(timeinfo->tm_year);
+			DateRegister::SetMonth(timeinfo->tm_mon + 1);
+			DateRegister::SetDay(timeinfo->tm_mday);*/
+			
+			DateRegister::SetDateValue(timeinfo->tm_year, timeinfo->tm_mon + 1, timeinfo->tm_mday);
+			TimeRegister::SetTimeValue(timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+			/*
+			TimeRegister::SetHours(timeinfo->tm_hour);
+			TimeRegister::SetMinutes(timeinfo->tm_min);
+			TimeRegister::SetSeconds(timeinfo->tm_sec);
+			*/
+			
+			InitializationAndStatusRegister::WriteEnable(false);
+			WriteProtectionRegister::WriteProtectionEnable(true);
 		}
 	};
 }

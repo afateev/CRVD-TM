@@ -303,9 +303,9 @@ public:
 			if (13 == key)
 			{
 				time_t newTime = _newTime.GetDateTime();
-				//PowerControl::DisableBackupDomainWriteProtection(true);
+				PowerControl::DisableBackupDomainWriteProtection(true);
 				Rblib::Rtc::SetTime(newTime);
-				//PowerControl::DisableBackupDomainWriteProtection(false);
+				PowerControl::DisableBackupDomainWriteProtection(false);
 				
 				WindowBase::Close();
 			}
