@@ -422,6 +422,7 @@ int main()
 		}
 		
 		DriveEvets::Run();
+		Events::Run();
 		wndEvents.DoLoPiorityWork();
 		ActiveDriveControllerParams::Run();
 		
