@@ -833,12 +833,13 @@ public:
 		SourceCodeIst,
 		SourceCodeUrot,
 		SourceCodeIrot,
+		SourceCodePhi,
 		SourceCodeEngineRun,
         SourceCodeEnergising
 	};
 	
 	static const unsigned char SourceCodeMinAnalog = SourceCodeUst;
-	static const unsigned char SourceCodeMaxAnalog = SourceCodeIrot;
+	static const unsigned char SourceCodeMaxAnalog = SourceCodePhi;
 	static const unsigned char SourceCodeMinDiscrette = SourceCodeEngineRun;
 	static const unsigned char SourceCodeMaxDiscrette = SourceCodeEnergising;
 protected:
@@ -963,6 +964,8 @@ public:
 			return -_analogValues.Urot;
 		case SourceCodeIrot:	
 			return -_analogValues.Irot;
+		case SourceCodePhi:	
+			return -_analogValues.Ist * 1.0;
 		}
 		
 		return 0;
@@ -985,6 +988,8 @@ public:
 			return _analogValues.Urot;
 		case SourceCodeIrot:	
 			return _analogValues.Irot;
+		case SourceCodePhi:	
+			return _analogValues.Ist * 1.0;
 		}
 		
 		return 0;
@@ -1023,6 +1028,12 @@ public:
 			break;
 		case SourceCodeIrot:
 			v = ((signed short)_record.Irot) / 100.0;
+			break;
+		case SourceCodePhi:
+			float rad = (signed short)_record.Phi;
+			rad /= 10.0;
+			rad *= 3.1415926535897932384626433832795 / 180.0;
+			v = _record.Ist / 10.0 * sin( rad );
 			break;
 		case SourceCodeEngineRun:
 			v = (_record.Discrete & (1 << 10)) == (1 << 10) ? 1 : 0;
@@ -1151,9 +1162,10 @@ public:
 		DrawSource(0, 48 + (source1Id == OscSource::SourceCodeIst ? 240 : 0), " Iст", source1Id == OscSource::SourceCodeIst || source2Id == OscSource::SourceCodeIst);
 		DrawSource(0, 64 + (source1Id == OscSource::SourceCodeUrot ? 240 : 0), " Uрот", source1Id == OscSource::SourceCodeUrot || source2Id == OscSource::SourceCodeUrot);
 		DrawSource(0, 80 + (source1Id == OscSource::SourceCodeIrot ? 240 : 0), " Iрот", source1Id == OscSource::SourceCodeIrot || source2Id == OscSource::SourceCodeIrot);
+		DrawSource(0, 96 + (source1Id == OscSource::SourceCodePhi ? 240 : 0), " Iркт", source1Id == OscSource::SourceCodePhi || source2Id == OscSource::SourceCodePhi);
 		
-		DrawSource(0, 112, "Д вкл", source3Id == OscSource::SourceCodeEngineRun);
-		DrawSource(0, 128, "Возб ", source3Id == 5);
+		DrawSource(0, 128, "Д вкл", source3Id == OscSource::SourceCodeEngineRun);
+		DrawSource(0, 144, "Возб ", source3Id == OscSource::SourceCodeEnergising);
 	}
 	
 	void DrawSource(int posX, int posY, char *text, bool selected)
