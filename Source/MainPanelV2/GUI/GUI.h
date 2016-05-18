@@ -312,8 +312,10 @@ void ControllerParamsMenuEndEditorsInit()
     CONTROLLER_PARAM_INIT(RotorCurrentMaxDisplay);
 	
     CONTROLLER_PARAM_UST_INIT(CosChannel);
-	CONTROLLER_PARAM_UST_INIT(AngleSetupDisplay);
 	CONTROLLER_PARAM_UST_INIT(EnergizingCurrentSetup);
+	CONTROLLER_PARAM_UST_INIT(AngleSetupDisplay);
+	CONTROLLER_PARAM_UST_INIT(EnergizingReactCurrentSetup);
+	CONTROLLER_PARAM_UST_INIT(EnergizingReactPowerSetup);
     
 	INDICATION_PARAM_INIT(StatorVoltageMinDisplay);
 	INDICATION_PARAM_INIT(StatorCurrentMinDisplay);
