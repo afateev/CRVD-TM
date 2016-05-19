@@ -35,7 +35,7 @@ struct OscRequestInfo
 	}
 };
 
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+template<class ModBus, unsigned char MainAddress, unsigned char AdditionalAddress, int oscRecordSize>
 class DriveController
 {
 public:
@@ -112,6 +112,7 @@ public:
 	static const int OscRecordSize = oscRecordSize;
 	static const int OscRequestMaxPortionSize = 250 / OscRecordSize;
 	
+	typedef Rblib::CallbackWrapper<> ModbusSelectCallbackType;
 	typedef Rblib::CallbackWrapper<bool &> AllowOscReadCallbackType;
 	typedef Rblib::CallbackWrapper<unsigned int, unsigned char *, int> OnOscReadedCallbackType;
 	typedef Rblib::CallbackWrapper<OscType, unsigned int> OnOscEventCallbackType;
@@ -150,7 +151,8 @@ protected:
     //static bool _editReg[_registersCount];
     
     static unsigned char _currentRequest;
-	static unsigned char _regRequestCount;
+	static unsigned int _regRequestCountdown[2];
+	static unsigned int _oscRequestCountdown;
     static bool _writeReg97;    // надо записать чтобы сохранился EEPROM вв регуляторе
     static bool _readOneShot;   // Перечитать один раз несмотря на чтение осциллограмм
     static unsigned int _problemCount;
@@ -163,6 +165,7 @@ protected:
 	static OscRequestInfo _oscRequest;
 public:	
 	static bool DoOnlyLowerRegsRequest;
+	static ModbusSelectCallbackType ModbusSelectCallback;
 	static AllowOscReadCallbackType AllowOscReadCallback;
 	static OnOscReadedCallbackType OnOscReadedCallback;
 	static OnOscEventCallbackType OnOscEventCallback;
@@ -269,6 +272,19 @@ public:
 		bool allowOscRead = false;
 		AllowOscReadCallback(allowOscRead);
 		
+		for (int i = 0; i < 2; i++)
+		{
+			if (_regRequestCountdown[i] > 0)
+			{
+				_regRequestCountdown[i]--;
+			}
+		}
+		
+		if (_oscRequestCountdown > 0)
+		{
+			_oscRequestCountdown--;
+		}
+		
 		switch(_state)
 		{
 		case StateRequest:
@@ -278,60 +294,35 @@ public:
                     ModBus::ChangeSpeed(Config::MainComPortClockSourceFrequency, 115200);
 					ModBus::WaitLastByteTx = false;
 										
-					if (_regRequestCount > 0)
+					
 					{
-						// осциллограмму вычитываем только из активного регулятора, а он имеет всегда адрес №1
-						if (ImActive())
+						bool requestSended = false;
+						if (_regRequestCountdown[_currentRequest] < 1)
 						{
-							int loadCount = GetOscLoadCount();
+							ModbusSelectCallback();
+							unsigned int first = requests[_currentRequest].FirstReg;
+							unsigned int count = requests[_currentRequest].RegsCount;
+							unsigned int requestSize = ModBusMaster::BuildReadHoldingRegisters(_request, _address, first, count);
+							for (int i = first; i < first + count; i++)
+								_regState[i].Has = false;
+							ModBus::SendRequest(_request, requestSize);
+							requestSended = true;
 							
-							if (loadCount)
+							switch (_currentRequest)
 							{
-								if (allowOscRead)
+							case 0:
 								{
-										unsigned int requestSize = ModBusMaster::BuildReadOscPoints(_request, _address, _oscLoadedPos, loadCount);
-										ModBus::SendRequest(_request, requestSize);
-										
-										_regRequestCount--;
-										
-										_state = StateWait;
-										break;
+									_regRequestCountdown[_currentRequest] = ImActive() ? 100 : 500;
 								}
+								break;
+							case 1:
+								{
+									_regRequestCountdown[_currentRequest] = 500;
+								}
+								break;
 							}
 						}
-						else
-						{
-							// сбросить _oscLoadedPos на текущую позицию чтобы при активации начать качать с нее
-							/*
-							if (HasRegValue(RegOscCurPos))
-							{
-								unsigned int curPos = GetRegValue(RegOscCurPos);
-								_oscLoadedPos = curPos;
-							}*/
-							_regRequestCount = 0;
-						}
-					}
-					/*
-					if (_oscRequestWait && _regRequestCount > 0)
-					{
-						unsigned int first = _oscRequest.StartPoint;
-						unsigned int count = _oscRequest.PointsCount;
-						unsigned int requestSize = ModBusMaster::BuildReadOscPoints(_request, _address, first, count);
-						ModBus::SendRequest(_request, requestSize);
-						_oscRequestWait = false;
 						
-						_regRequestCount = 0; // сколько раз запрашивали регистры с момента последнего запроса осциллограммы
-						
-						_state = StateWait;
-					}
-					else*/
-					{
-						unsigned int first = requests[_currentRequest].FirstReg;
-						unsigned int count = requests[_currentRequest].RegsCount;
-						unsigned int requestSize = ModBusMaster::BuildReadHoldingRegisters(_request, _address, first, count);
-						for (int i = first; i < first + count; i++)
-							_regState[i].Has = false;
-						ModBus::SendRequest(_request, requestSize);
 						_currentRequest++;
 						if (_currentRequest >= (sizeof(requests) / sizeof(RequestInfo)))
 						{
@@ -342,25 +333,51 @@ public:
 							_currentRequest = 0;
 						}
 						
-						if (_regRequestCount < 255)
+						if (requestSended)
 						{
-							_regRequestCount = 4;
+							_state = StateWait;
+							break;
 						}
-						
-						_state = StateWait;
 					}
+					
+					if (_oscRequestCountdown < 1 )
+					{
+						// осциллограмму вычитываем только из активного регулятора, а он имеет всегда адрес №1
+						if (ImActive())
+						{
+							int loadCount = GetOscLoadCount();
+							
+							if (loadCount >= OscRequestMaxPortionSize)
+							{
+								if (allowOscRead)
+								{
+										ModbusSelectCallback();
+										unsigned int requestSize = ModBusMaster::BuildReadOscPoints(_request, _address, _oscLoadedPos, loadCount);
+										ModBus::SendRequest(_request, requestSize);
+										
+										_oscRequestCountdown = 50;
+										_state = StateWait;
+										break;
+								}
+							}
+						}
+					}
+				}
+				else
+				{
+					__no_operation();
 				}
 			}
 			break;
 		case StateWait:
 			{
-				if (ModBus::IsReady())
+				if (ModBus::IsReadComplete())
 					_state = StateResponse;
 			}
 			break;
 		case StateResponse:
 			{
-				if (!ModBus::IsReady())
+				if (!ModBus::IsReadComplete())
 				{
 					break;
 				}
@@ -448,10 +465,10 @@ public:
                         _problemCount++;
                     }
                     
-                    if (_address == MainAddres)
+                    if (_address == MainAddress)
 						_address = AdditionalAddress;
 					else
-						_address = MainAddres;
+						_address = MainAddress;
 				}
 				//_state = StateComplete;
                 _state = StateCheckChanges;
@@ -478,7 +495,8 @@ public:
                         {
                             if (_registers[i] != _editedRegisters[i] || i == RegOscSync)
                             {
-                                unsigned int requestSize = ModBusMaster::BuildWriteHoldingRegister(_request, _address, i, _editedRegisters[i]);
+                                ModbusSelectCallback();
+								unsigned int requestSize = ModBusMaster::BuildWriteHoldingRegister(_request, _address, i, _editedRegisters[i]);
 					            
 					            ModBus::SendRequest(_request, requestSize);
                             
@@ -494,7 +512,8 @@ public:
                     // новых изменений нет, но раньше были
                     if (!changed && _writeReg97)
                     {
-                        unsigned int requestSize = ModBusMaster::BuildWriteHoldingRegister(_request, _address, 97, 0xAA);
+                        ModbusSelectCallback();
+						unsigned int requestSize = ModBusMaster::BuildWriteHoldingRegister(_request, _address, 97, 0xAA);
 			            ModBus::SendRequest(_request, requestSize);
                         changed = true;
                         _writeReg97 = false;
@@ -523,12 +542,17 @@ public:
             break;
         case StateWaitWrite:
 			{
-				if (ModBus::IsReady())
+				if (ModBus::IsReadComplete())
 					_state = StateWriteResponse;
 			}
 			break;
         case StateWriteResponse:
 			{
+				if (!ModBus::IsReadComplete())
+				{
+					break;
+				}
+				
 				unsigned int readed = 0;
 				_response = ModBus::GetResponse(readed);
 				if (readed > 0 && 0 != _response)
@@ -681,6 +705,9 @@ public:
 };
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::ModbusSelectCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::ModbusSelectCallback;
+
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::AllowOscReadCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::AllowOscReadCallback;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
@@ -723,7 +750,10 @@ template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress
 unsigned char DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_currentRequest = 0;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
-unsigned char DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_regRequestCount = 0;
+unsigned int DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_regRequestCountdown[] = {0, 0};
+
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+unsigned int DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_oscRequestCountdown = 0;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 const RequestInfo DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::requests[2] = {RequestInfo(1, 15), RequestInfo(100, 69)};

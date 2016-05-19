@@ -51,39 +51,11 @@ static void OnKiloHertzTimerTick()
 	static unsigned int oscGetterCnt = 0;
 	static unsigned int diagnosticCnt = 0;
 	
+	/*
 	if (portScannerCnt >= 0)
 	{
 		
 		ModBusState::Run();
-		
-		/*
-		if (ControllerSwitch::IsPrimaryActive() || true)
-		{
-			portScanner::SkipPrimary = false;
-			if (!portScanner::SkipReserve)
-			{
-				portScanner::SkipReserve = portScanner::RunCountReserve > 7;
-			}
-			else
-			{
-				portScanner::RunCountReserve = 0;
-			}
-		}
-		
-		if (ControllerSwitch::IsReserveActive())
-		{
-			portScanner::SkipPrimary = true;
-			portScanner::SkipReserve = false;
-			
-			if (!portScanner::SkipPrimary)
-			{
-				portScanner::SkipPrimary = portScanner::RunCountPrimary > 7;
-			}
-			else
-			{
-				portScanner::RunCountPrimary = 0;
-			}
-		}*/
 		
 		portScanner::SkipDiagnostic = diagnosticCnt > 0;
 		if (diagnosticCnt < 100)
@@ -105,6 +77,13 @@ static void OnKiloHertzTimerTick()
 	}
 	
 	portScannerCnt++;
+	*/
+	
+	PrimaryController::Run();
+	ReserveController::Run();
+	//MainControllerDiagnostic::Run();
+	//ReservControllerDiagnostic::Run();
+	ModBusState::Run();
 	
 	display.Tick();
 	keyboardScanner::Tick();
@@ -338,11 +317,13 @@ int main()
 	Drivers::Board::GuiTimer::UpdateInterruptHandler = GuiTimerTick;
 	Drivers::Board::ModbusSlaveTimer::UpdateInterruptHandler = ModbusSlaveTimerTick;
 	
+	PrimaryController::ModbusSelectCallback = Drivers::Board::PortScanerConnection::Select<1>;
 	PrimaryController::AllowOscReadCallback.Set(OscCacheType::AllowRead, &OscCache);
 	PrimaryController::OnOscReadedCallback.Set(OscCacheType::StoreOscPart, &OscCache);
 	PrimaryController::OnOscEventCallback = OnPrimaryOscEvent;
 	PrimaryController::Init();
 	
+	ReserveController::ModbusSelectCallback = Drivers::Board::PortScanerConnection::Select<2>;
 	ReserveController::AllowOscReadCallback.Set(OscCacheType::AllowRead, &OscCache);
 	ReserveController::OnOscReadedCallback.Set(OscCacheType::StoreOscPart, &OscCache);
 	ReserveController::OnOscEventCallback = OnReserveOscEvent;

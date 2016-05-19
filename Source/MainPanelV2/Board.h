@@ -171,6 +171,32 @@ namespace MainPanel
 			typedef Gpio::D Port;
 			static const int Pin0 = 10;
 			static const int Pin1 = 11;
+		public:
+			static void Init()
+			{
+				Port::SetMode(Pin0, Port::ModeOutput);
+				Port::SetMode(Pin1, Port::ModeOutput);
+			}
+			
+			template<int val>
+			static void Select()
+			{
+				switch (val)
+				{
+				case 1:
+					{
+						Port::ClearBit(Pin0);
+						Port::ClearBit(Pin1);
+					}
+					break;
+				case 2:
+					{
+						Port::SetBit(Pin0);
+						Port::ClearBit(Pin1);
+					}
+					break;
+				}
+			}
 		};
 		
 		typedef Timer::Timer1 TenKiloHertzTimer;
@@ -193,6 +219,7 @@ namespace MainPanel
 		{
 			Clock::Init();
 			DisplayConnection::Init();
+			PortScanerConnection::Init();
 			
 			TenKiloHertzTimer::SetPrescaler(42 * 2);
 			TenKiloHertzTimer::SetMaxCount(1000000 / TenKiloHertzTickFrequency);
