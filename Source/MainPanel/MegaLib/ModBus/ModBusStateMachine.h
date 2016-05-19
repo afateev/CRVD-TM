@@ -67,7 +67,7 @@ protected:
 		StateWaitWriteEnd,	// ожидание, пока данные отправятся
 		StateWaitWriteLastByte,	// ожидание, пока данные отправятся
 		StateWaitRead,		// ожидание приема данных и / или таймаута (~ 3.5 байта)
-		StateRead			// вычитывание данных
+		StateReadComplete	// вычитывание данных закончено
 	};
 	
 	static volatile State _state;
@@ -91,6 +91,11 @@ public:
 	static bool IsReady()
 	{
 		return StateReady == _state;
+	}
+	
+	static bool IsReadComplete()
+	{
+		return StateReadComplete == _state;
 	}
 
 	static void ChangeSpeed(unsigned long CoreFrequency, unsigned int baudrate)
@@ -131,10 +136,21 @@ public:
 		
 		RequestSize = count;
 		ResponseSize = 0;
+		
+		// есть что отправить
+		if (RequestSize > 0)
+		{
+			// начинаем
+			_state = StateWrite;
+		}
 	}
 	
 	static unsigned char * GetResponse(unsigned int &dataLen)
 	{
+		if (IsReadComplete())
+		{
+			_state = StateReady;
+		}
 		dataLen = ResponseSize;
 		return _buffer;
 	}
@@ -185,10 +201,10 @@ public:
 				// ждём пока _packetDetector вызовет OnTimeOut
 			}
 			break;
-		case StateRead:
+		case StateReadComplete:
 			{
 				// данные в количестве ResponseSize лежат в _buffer
-				_state = StateReady;
+				// ожидание вызова GetResponse
 			}
 			break;
 		};
@@ -237,7 +253,7 @@ public:
 		//Gpio::_D::SetOutputPin(2);
 		//Gpio::_D::ClearBit(2);
 		if (StateWaitRead == _state)
-			_state = StateRead;
+			_state = StateReadComplete;
 	}
 	
 	static void OnByteTimeOut()
