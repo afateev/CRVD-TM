@@ -19,6 +19,7 @@ namespace MainPanel
 		typedef Rblib::Usart Usart;
 		typedef Rblib::FlashMemoryController FlashMemoryController;
 		typedef Rblib::Afio Afio;
+		typedef Rblib::Usb::OtgFs Usb;
 		
 		class Clock
 		{
@@ -91,6 +92,7 @@ namespace MainPanel
 				Rcc::EnableClockUsart3();
 				Rcc::EnableClockSpi3();
 				Rcc::EnableClockPowerInterface();
+				Rcc::EnableClockOTGFS();
 				
 				if (!Rcc::IsRtcEnabled())
 				{
@@ -199,6 +201,67 @@ namespace MainPanel
 			}
 		};
 		
+		class UsbConnection
+		{
+		public:
+			typedef Gpio::A USB_VBUS_Port;
+			static const int USB_VBUS_Pin = 9;
+			
+			typedef Gpio::A USB_DM_Port;
+			static const int USB_DM_Pin = 11;
+			
+			typedef Gpio::A USB_DP_Port;
+			static const int USB_DP_Pin = 12;
+			
+			typedef Gpio::C USB_OverCurrent_Port;
+			static const int USB_OverCurrent_Pin = 8;
+			
+			typedef Gpio::C USB_PowerOn_Port;
+			static const int USB_PowerOn_Pin = 9;
+		public:
+			static void Init()
+			{
+				USB_VBUS_Port::SetMode(USB_VBUS_Pin, USB_VBUS_Port::ModeInput);
+				
+				USB_DM_Port::SetMode(USB_DM_Pin, USB_DM_Port::ModeAlternate);
+				USB_DM_Port::SetAlternateFunctionNumber(USB_DM_Pin, 10);
+				
+				USB_DP_Port::SetMode(USB_DP_Pin, USB_DP_Port::ModeAlternate);
+				USB_DP_Port::SetAlternateFunctionNumber(USB_DP_Pin, 10);
+				
+				USB_OverCurrent_Port::SetMode(USB_OverCurrent_Pin, USB_OverCurrent_Port::ModeInput);
+				
+				USB_PowerOn_Port::SetMode(USB_PowerOn_Pin, USB_PowerOn_Port::ModeOutput);
+				USB_PowerOn_Port::SetBit(USB_PowerOn_Pin);
+				
+				Nvic::InterruptEnable(Nvic::InterruptVector_OTG_FS);
+				Usb::PowerOnCallback = PowerOn;
+				Usb::OnDeviceConnectedCallback = OnDeviceConnected;
+				Usb::Init();
+			}
+			
+			static void PowerOn(bool on = true)
+			{
+				if (on)
+				{
+					USB_PowerOn_Port::ClearBit(USB_PowerOn_Pin);
+				}
+				else
+				{
+					USB_PowerOn_Port::SetBit(USB_PowerOn_Pin);
+				}
+			}
+			
+			static void OnDeviceConnected(bool connected)
+			{
+			}
+			
+			static void Tick(unsigned int tickFrequency)
+			{
+				Usb::OnTick(tickFrequency);
+			}
+		};
+		
 		typedef Timer::Timer1 TenKiloHertzTimer;
 		static const unsigned int TenKiloHertzTickFrequency = 10000;
 		
@@ -294,6 +357,8 @@ namespace MainPanel
 			
 			Gpio::B::SetMode(0, Gpio::B::ModeOutput);
 			Gpio::B::SetMode(1, Gpio::B::ModeOutput);
+			
+			UsbConnection::Init();
 		}
 		
 		static void Rs485Init(int boudrate, bool parityEnable, bool parityEven)

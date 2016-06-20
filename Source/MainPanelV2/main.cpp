@@ -40,6 +40,7 @@ static void OnTenKiloHertzTimerTick()
 	//Drivers::Board::Gpio::B::SetBit(0);
 	ModBusState::PacketTimeoutDetectorTick();
 	Drivers::Rs485.Tick(Drivers::Board::TenKiloHertzTickFrequency);
+	Drivers::Board::UsbConnection::Tick(10000);
 	//Drivers::Board::Gpio::B::ClearBit(0);
 }
 

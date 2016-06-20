@@ -308,6 +308,17 @@ namespace Global
 		{
 			return (Mode)Register::Ptr()->CMOD;
 		}
+		
+		static bool IsHostPortInterrupt()
+		{
+			return Register::Ptr()->HPRTINT;
+		}
+		
+		static void ClearFlags()
+		{
+			Core::RegisterValueType tmp = *((Core::RegisterValueType *)Register::Ptr());
+			*((Core::RegisterValueType *)Register::Ptr()) = tmp;
+		}
 	};
 	
 	// OTG_FS interrupt mask register (OTG_FS_GINTMSK)
@@ -370,6 +381,16 @@ namespace Global
 		static void EnableHostPortInterrupt()
 		{
 			Register::Ptr()->PRTIM = 1;
+		}
+		
+		static void EnableNonPeriodicTxFifoEmptyInterrupt()
+		{
+			Register::Ptr()->NPTXFEM = 1;
+		}
+		
+		static void EnablePeriodicTxFifoEmptyInterrupt()
+		{
+			Register::Ptr()->PTXFEM = 1;
 		}
 	};
 	
@@ -755,6 +776,12 @@ namespace Host
 	public:
 		static const Core::RegisterAddressType AddressOffset = 0x440;
 		static const Core::RegisterAddressType Address = BaseAddress + AddressOffset;
+		
+		enum Speed
+		{
+			SpeedFull = 1,
+			SpeedLow = 2
+		};
 	protected:
 		struct RegStruct
 		{
@@ -777,7 +804,43 @@ namespace Host
 		
 		typedef Register<Address, RegStruct> Register;
 	public:
+		static void PowerOn(bool on)
+		{
+			Register::Ptr()->PPWR = on;
+		}
 		
+		static bool IsDeviceConnecting()
+		{
+			return Register::Ptr()->PCDET;
+		}
+		
+		static bool PortEnabled()
+		{
+			return Register::Ptr()->PENA;
+		}
+		
+		static bool IsPortEnableChanging()
+		{
+			return Register::Ptr()->PENCHNG;
+		}
+		
+		static void Reset(bool reset)
+		{
+			Register::Ptr()->PRST = reset;
+		}
+		
+		static Speed GetSpeed()
+		{
+			return (Speed) Register::Ptr()->PSPD;
+		}
+		
+		static void ClearFlags()
+		{
+			Core::RegisterValueType tmp = *((Core::RegisterValueType *)Register::Ptr());
+			RegStruct *write = (RegStruct *)&tmp;
+			write->PENA = 0; // не сбрасывать этот бит
+			*((Core::RegisterValueType *)Register::Ptr()) = tmp;
+		}
 	};
 	
 	// OTG_FS Host channel-x characteristics register (OTG_FS_HCCHARx) (x = 0..7, where x = Channel_number)
@@ -922,21 +985,61 @@ namespace Host
 	{
 	};
 }
+
+	template
+		<
+			int IdObj
+		>
+	class StaticParams
+	{
+	public:
+		typedef CallbackWrapper<bool> PowerOnCallbackType;
+		typedef CallbackWrapper<bool> OnDeviceConnectedCallbackType;
+	public:
+		static PowerOnCallbackType PowerOnCallback;
+		static OnDeviceConnectedCallbackType OnDeviceConnectedCallback;
+	protected:
+	};
 	
+	template <int IdObj>
+		StaticParams<IdObj>::PowerOnCallbackType StaticParams<IdObj>::PowerOnCallback;
+	
+	template <int IdObj>
+		StaticParams<IdObj>::OnDeviceConnectedCallbackType StaticParams<IdObj>::OnDeviceConnectedCallback;
+
 	template
 		<
 			unsigned int IdObj,
 			Core::RegisterAddressType BaseAddress
 		>
 	class OtgFs :
-		public IdObjectBase<IdObj>
+		public IdObjectBase<IdObj>,
+		public StaticParams<IdObj>
 	{
 	public:
 		typedef Global::Registers<BaseAddress> GlobalRegisters;
 		typedef Host::Registers<BaseAddress> HostRegisters;
+		typedef StaticParams<IdObj> StaticParams;
+		
+		enum State
+		{
+			StateNotInited,
+			StateInit,
+			StateModeDetect,
+			StateHostWaitConnection,
+			StateHostStartReset,
+			StateHostWaitReset,
+			StateHostWaitEnableChanging,
+			StateDeviceConnected
+		};
+	protected:
+		static State _state;
+		static unsigned int _counter;
 	public:
 		static void Init()
 		{
+			PowerOn(false);
+			
 			// 1. Program the following fields in the OTG_FS_GAHBCFG register:
 			// Ц Global interrupt mask bit GINTMSK = 1
 			// Ц RxFIFO non-empty (RXFLVL bit in OTG_FS_GINTSTS)
@@ -957,12 +1060,57 @@ namespace Host
 			
 			// 4. The software can read the CMOD bit in OTG_FS_GINTSTS to determine whether the
 			// OTG_FS controller is operating in host or device mode.
-			Global::Mode mode = GlobalRegisters::GetMode();
-			switch (mode)
+			_state = StateInit;
+		}
+		
+		static void OnTick(unsigned int tickFrequency)
+		{
+			switch(_state)
 			{
-			case Global::ModeHost:
+			case StateInit:
 				{
-					InitHost();
+					_state = StateModeDetect;
+					_counter = tickFrequency * 0.100;
+				}
+				break;
+			case StateModeDetect:
+				{
+					if (_counter > 0)
+					{
+						_counter--;
+					}
+					else
+					{
+						Global::Mode mode = GlobalRegisters::GetMode();
+						switch (mode)
+						{
+						case Global::ModeHost:
+							{
+								InitHostStage1();
+							}
+							break;
+						}
+					}
+				}
+				break;
+			case StateHostStartReset:
+				{
+					_state = StateHostWaitReset;
+					_counter = tickFrequency * 0.010;
+					HostRegisters::Reset(true);
+				}
+				break;
+			case StateHostWaitReset:
+				{
+					if (_counter > 0)
+					{
+						_counter--;
+					}
+					else
+					{
+						_state = StateHostWaitEnableChanging;
+						HostRegisters::Reset(false);
+					}
 				}
 				break;
 			}
@@ -970,9 +1118,71 @@ namespace Host
 		
 		static void InterruptHandler()
 		{
+			GlobalRegisters::ClearFlags();
+			
+			if (GlobalRegisters::IsHostPortInterrupt())
+			{
+				if (HostRegisters::IsDeviceConnecting())
+				{
+					switch(_state)
+					{
+					case StateHostWaitConnection:
+						{
+							_state = StateHostStartReset;
+						}
+						break;
+					}
+				}
+				
+				if (HostRegisters::IsPortEnableChanging())
+				{
+					//HostRegisters::PortEnableChangingClear();
+					
+					switch(_state)
+					{
+					case StateHostWaitEnableChanging:
+						{
+							if (HostRegisters::PortEnabled())
+							{
+								InitHostStage2();
+								OnDeviceConnected();
+							}
+						}
+						break;
+					case StateDeviceConnected:
+						{
+							if (!HostRegisters::PortEnabled())
+							{
+								OnDeviceDisconnected();
+							}
+						}
+						break;
+					}
+				}
+				
+				HostRegisters::ClearFlags();
+			}
 		}
 	protected:
-		static void InitHost()
+		
+		static void PowerOn(bool on)
+		{
+			StaticParams::PowerOnCallback(on);
+		}
+		
+		static void OnDeviceConnected()
+		{
+			_state = StateDeviceConnected;
+			StaticParams::OnDeviceConnectedCallback(true);
+		}
+		
+		static void OnDeviceDisconnected()
+		{
+			_state = StateHostWaitConnection;
+			StaticParams::OnDeviceConnectedCallback(false);
+		}
+			
+		static void InitHostStage1()
 		{
 			// 1. Program the HPRTINT in the OTG_FS_GINTMSK register to unmask
 			GlobalRegisters::EnableHostPortInterrupt();
@@ -981,13 +1191,22 @@ namespace Host
 			// оставл€ем по умолчанию
 			
 			// 3. Program the PPWR bit in OTG_FS_HPRT to 1. This drives VBUS on the USB.
+			_state = StateHostWaitConnection;
+			HostRegisters::PowerOn(true);
+			PowerOn(true);
 			// 4. Wait for the PCDET interrupt in OTG_FS_HPRT0. This indicates that a device is
 			// connecting to the port.
 			// 5. Program the PRST bit in OTG_FS_HPRT to 1. This starts the reset process.
 			// 6. Wait at least 10 ms for the reset process to complete.
 			// 7. Program the PRST bit in OTG_FS_HPRT to 0.
 			// 8. Wait for the PENCHNG interrupt in OTG_FS_HPRT.
+			
+		}
+		
+		static void InitHostStage2()
+		{
 			// 9. Read the PSPD bit in OTG_FS_HPRT to get the enumerated speed.
+			typename HostRegisters::Speed speed = HostRegisters::GetSpeed();
 			// 10. Program the HFIR register with a value corresponding to the selected PHY clock 1
 			// 11. Program the FSLSPCS field in the OTG_FS_HCFG register following the speed of the
 			// device detected in step 9. If FSLSPCS has been changed a port reset must be
@@ -997,8 +1216,29 @@ namespace Host
 			// the Non-periodic transmit FIFO for non-periodic transactions.
 			// 14. Program the OTG_FS_HPTXFSIZ register to select the size and start address of the
 			// periodic transmit FIFO for periodic transactions.
+			
+			/*
+			// The application must initialize one or more channels before it can communicate with
+			// connected devices. To initialize and enable a channel, the application must perform the
+			// following steps:
+			// 1. Program the OTG_FS_GINTMSK register to unmask the following:
+			// 2. Channel interrupt
+			// Ц Non-periodic transmit FIFO empty for OUT transactions (applicable when
+			// operating in pipelined transaction-level with the packet count field programmed
+			// with more than one).
+			GlobalRegisters::EnableNonPeriodicTxFifoEmptyInterrupt();
+			// Ц Non-periodic transmit FIFO half-empty for OUT transactions (applicable when
+			// operating in pipelined transaction-level with the packet count field programmed
+			// with more than one).
+			GlobalRegisters::EnablePeriodicTxFifoEmptyInterrupt();*/
 		}
 	};
+	
+	template <unsigned int IdObj, Core::RegisterAddressType BaseAddress>
+		OtgFs<IdObj, BaseAddress>::State OtgFs<IdObj, BaseAddress>::_state = OtgFs<IdObj, BaseAddress>::StateNotInited;
+	
+	template <unsigned int IdObj, Core::RegisterAddressType BaseAddress>
+		unsigned int OtgFs<IdObj, BaseAddress>::_counter = 0;
 	
 	class Usb
 	{
