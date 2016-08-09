@@ -8,5 +8,6 @@
 #include "Driver\Bus6800.h"
 #include "Driver\RA8835.h"
 #include "Driver\ScreenRA8835.h"
+#include "Driver\TLC5615.h"
 
 #endif
