@@ -399,7 +399,6 @@ void SetRegisterValue(unsigned short reg, unsigned short val, bool &result)
 		break;
 	case RegIOut1:
 		outputValue[0] = val & 0xFF;
-		outputValue[0] <<= 1;
 		outputCountdown[0] = OutputTimeout;
 		result = true;
 		break;
