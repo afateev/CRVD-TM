@@ -312,7 +312,9 @@ void CopyOscData(char *dstFileName, unsigned int fileNumber, unsigned int dataOf
 		partFileNumber[0] = fileNumber;
 	}
 	
-	for (int p = 0; p < 1; p++)
+	unsigned int writeOffset = 0;
+	
+	for (int p = 0; p < 2; p++)
 	{
 	
 		partStart[p] *= OscFileFormat::OscRecordSize;
@@ -354,10 +356,11 @@ void CopyOscData(char *dstFileName, unsigned int fileNumber, unsigned int dataOf
 			result &= fl_fread(_oscDataCopyBuffer, portionSize, 1, srcFile) == portionSize;
 			
 			FL_FILE *dstFile = (FL_FILE*)fl_fopen(dstFileName, "rw");
-			result &= fl_fseek(dstFile, dataOffset + i, 0) == 0;
+			result &= fl_fseek(dstFile, dataOffset + writeOffset, 0) == 0;
 			result &= fl_fwrite(_oscDataCopyBuffer, portionSize, 1, dstFile) == portionSize;
 			fl_fclose(dstFile);
 			i += portionSize;
+			writeOffset += portionSize;
 		}
 		
 		fl_fclose(srcFile);
