@@ -42,12 +42,14 @@ protected:
 	unsigned int _currentOffset;
 	unsigned int _bufferPos;
 	unsigned char _buffer[BufferSize];
+	unsigned int _loadedPos;
 public:
 	OscCacheImplementer()
 	{
 		_state = StateInit;
 		_fileNumber = 0;
 		_bufferPos = 0;
+		_loadedPos = 0;
 	}
 	
 	bool AllowRead()
@@ -139,7 +141,7 @@ public:
 			fileNumber++;
 		}
 		
-		return GetCurrentFileNumber() >= fileNumber && ((_currentOffset + _bufferPos) >= (pos * OscRecordSize));
+		return GetCurrentFileNumber() >= fileNumber && (_loadedPos >= (pos * OscRecordSize));
 	}
 	
 	static void IsDataLoaded(void *callbackParam, unsigned int fileNumber, int pos, bool &loaded)
@@ -178,6 +180,7 @@ public:
 				{
 					_currentOffset = 0;
 					_bufferPos = 0;
+					_loadedPos = 0;
 					_state = StateFillBuffer;
 				}
 			}
@@ -198,6 +201,11 @@ public:
 				else
 				{
 					_state = StateFillBuffer;
+				}
+				
+				if (_currentOffset + _bufferPos > _loadedPos)
+				{
+					_loadedPos = _currentOffset + _bufferPos;
 				}
 				
 				_currentOffset = 0;
