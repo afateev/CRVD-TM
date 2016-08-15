@@ -138,7 +138,14 @@ public:
 					}
 					break;
 				}
-			
+				
+				// нельзя сохранить то, чего быть не может
+				// первый файл, нельзя отрицательный старт
+				if (startPos < 0 && fileNumber < 1)
+				{
+					startPos = 0;
+				}
+				
 				bool dataLoaded = false;
 				IsDataLoadedCallback(fileNumber, endPos, dataLoaded);
 				
@@ -148,8 +155,8 @@ public:
 					_oscEventPending[i].Reset();
 					
 					OscFileFormat::HeaderStruct hdr;
-					hdr.Length = MarkersDelta(startPos, endPos);
-					hdr.Center = MarkersDelta(startPos, centerPos);
+					hdr.Length = endPos - startPos;
+					hdr.Center = centerPos - startPos;
 					
 					if (hdr.Length > 0)
 					{
