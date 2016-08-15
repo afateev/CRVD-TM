@@ -373,7 +373,7 @@ public:
 		
 		unsigned short data = _activeController->GetRegValue(RegIrot);
 		float res = data;
-		res /= 100.0;
+		res /= 10.0;
 		if (res < _indicationParams[IndicationParamRotorCurrentMinDisplay])
 			res = 0.0;
 		return res;
