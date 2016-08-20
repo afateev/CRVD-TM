@@ -78,6 +78,7 @@ int main()
 	
 	Nvic::InterruptEnable(Nvic::InterruptVector_OTG_FS);
 	Usb::Init();
+
 	
 	while(1)
 	{
