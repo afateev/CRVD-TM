@@ -11,6 +11,10 @@
 #include "OscFileFormat.h"
 #include "Controllers.h"
 
+#ifdef USB_STORAGE
+#include "ff.h"
+#endif
+
 template<class ActiveDriveControllerParams, unsigned int CacheSize>
 class OscGetter
 {
@@ -37,11 +41,11 @@ public:
 	static const unsigned short OscWaitFileWriteMaxCnt = 350;
 	
 	static DriveControllerType _controller;	
-	static char LastFileName[50];
 	
 	typedef Rblib::CallbackWrapper<unsigned int &> GetOscCacheFileNumberType;
 	typedef Rblib::CallbackWrapper<unsigned int, int, bool &> IsDataLoadedCallbackType;
 	typedef Rblib::CallbackWrapper<char *, unsigned int, unsigned int, int, int> AppendOscDataCallbackType;
+	typedef Rblib::CallbackWrapper<> OnOscFileAddedCallbackType;
 protected:	
 	typedef bool FileCallback(const char *fileName, long int offset, int origin, unsigned char *data, unsigned int count);
 	static FileCallback *_readFile;
@@ -50,6 +54,7 @@ protected:
 	struct OscEventInfo
 	{
 	public:
+		unsigned int Dummy;
 		unsigned int FileNumber;
 		int Pointer;
 	public:
@@ -60,6 +65,7 @@ protected:
 		
 		void Reset()
 		{
+			Dummy = 0;
 			FileNumber = 0;
 			Pointer = -1;
 		}
@@ -73,6 +79,7 @@ public:
 	static GetOscCacheFileNumberType GetOscCacheFileNumber;
 	static IsDataLoadedCallbackType IsDataLoadedCallback;
 	static AppendOscDataCallbackType AppendOscDataCallback;
+	static OnOscFileAddedCallbackType OnOscFileAddedCallback;
 public:
 	static void Init(FileCallback *read, FileCallback *write)
 	{
@@ -96,8 +103,8 @@ public:
 	static void OnOscEvent(OscFileFormat::OscType oscType, unsigned int pointer)
 	{
 		//return;
-		_oscEventPending[oscType].Pointer = pointer;
 		GetOscCacheFileNumber(_oscEventPending[oscType].FileNumber);
+		_oscEventPending[oscType].Pointer = pointer;
 	}
 	
 	static bool Run()
@@ -111,6 +118,11 @@ public:
 			// преоритет событий по списку в перечислении
 			if (pointer >= 0)
 			{
+				if (_oscEventPending[i].FileNumber == 65535)
+				{
+					__no_operation();
+				}
+				
 				int centerPos =  pointer;
 				int startPos = 0;
 				int endPos = 0;
@@ -190,6 +202,7 @@ public:
 						if (res)
 						{
 							AppendOscDataCallback(fileName, fileNumber, sizeof(OscFileFormat::HeaderStruct) + sizeof(OscFileFormat::AnalogValuesStruct), startPos, endPos);
+							OnOscFileAddedCallback();
 						}
 					}
 				}
@@ -203,6 +216,7 @@ public:
 	
 	static unsigned long GetOscCount()
 	{
+#ifdef SD_STORAGE
 		unsigned int res = 0;
 		
 		FL_DIR dirstat;
@@ -223,6 +237,37 @@ public:
 		}
 		
 		return res;
+#endif
+#ifdef USB_STORAGE
+		FRESULT res;
+		DIR dir;
+		static FILINFO fno;
+		static char lfn[_MAX_LFN + 1];
+		fno.lfname = lfn;
+		fno.lfsize = sizeof(lfn);
+		int count = 0;
+
+
+		res = f_opendir(&dir, "osc");                       /* Open the directory */
+		if (res == FR_OK)
+		{
+			for (;;)
+			{
+				res = f_readdir(&dir, &fno);                   /* Read a directory item */
+				if (res != FR_OK || fno.fname[0] == 0)
+				{
+					break;  /* Break on error or end of dir */
+				}
+				if (!(fno.fattrib & AM_DIR))
+				{                    /* It is a directory */
+					count++;
+				}
+			}
+			f_closedir(&dir);
+		}
+		
+		return count;
+#endif
 	}
 	
 	static void Cache(unsigned long lastOscNumber, unsigned long count)
@@ -252,7 +297,7 @@ public:
 		unsigned int writePos = 0;
 		
 		_oscCountInCache = last - first + 1;
-		
+#ifdef SD_STORAGE		
 		FL_DIR dirstat;
 		if (fl_opendir("/osc", &dirstat))
 		{
@@ -294,16 +339,65 @@ public:
 	
 			fl_closedir(&dirstat);
 		}
+#endif
+#ifdef USB_STORAGE
+			FRESULT res;
+			DIR dir;
+			static FILINFO fno;
+			static char lfn[_MAX_LFN + 1];
+			fno.lfname = lfn;
+			fno.lfsize = sizeof(lfn);
+
+			res = f_opendir(&dir, "osc");                       /* Open the directory */
+			if (res == FR_OK)
+			{
+				for (;;)
+				{
+					res = f_readdir(&dir, &fno);                   /* Read a directory item */
+					if (res != FR_OK || fno.fname[0] == 0)
+					{
+						break;  /* Break on error or end of dir */
+					}
+					if (!(fno.fattrib & AM_DIR))
+					{                    /* It is a directory */
+						fileNumber++;
+						
+						if (fileNumber >= first)
+						{
+							int i = 0;
+							for (i = 0; i < OscFileFormat::FileNameSize; i++)
+							{
+								// длинное имя передается в буфере, который мы указали при инициализации fno
+								_oscCache[writePos].FileName[i] = lfn[i];
+								if (_oscCache[writePos].FileName[i] == 0)
+								{
+									break;
+								}
+							}
+							
+							_oscCache[writePos].FileName[i] = 0;
+							writePos++;
+							
+							if (fileNumber >= last)
+							{
+								break;
+							}
+							
+							if (writePos >= CacheSize)
+							{
+								break;
+							}
+						}
+					}
+				}
+				f_closedir(&dir);
+			}
+#endif
 		
 		/*
 		if (!_readFile((first - 1) * sizeof(Event::EventData), 0, (unsigned char *)_eventsCache, _eventsCountInCache * sizeof(Event::EventData)))
 			_eventsCountInCache = 0;
 		*/
-	}
-	
-	static char *GetLastFileName()
-	{
-		return LastFileName;
 	}
 	
 	static short GetProgress()
@@ -369,9 +463,6 @@ template<class ActiveDriveControllerParams, unsigned int CacheSize>
 OscGetter<ActiveDriveControllerParams, CacheSize>::DriveControllerType OscGetter<ActiveDriveControllerParams, CacheSize>::_controller = OscGetter<ActiveDriveControllerParams, CacheSize>::DriveControllerTypeUnknown;
 
 template<class ActiveDriveControllerParams, unsigned int CacheSize>
-char OscGetter<ActiveDriveControllerParams, CacheSize>::LastFileName[];
-
-template<class ActiveDriveControllerParams, unsigned int CacheSize>
 OscGetter<ActiveDriveControllerParams, CacheSize>::FileCallback *OscGetter<ActiveDriveControllerParams, CacheSize>::_readFile = 0;
 
 template<class ActiveDriveControllerParams, unsigned int CacheSize>
@@ -397,6 +488,9 @@ OscGetter<ActiveDriveControllerParams, CacheSize>::IsDataLoadedCallbackType OscG
 
 template<class ActiveDriveControllerParams, unsigned int CacheSize>
 OscGetter<ActiveDriveControllerParams, CacheSize>::AppendOscDataCallbackType OscGetter<ActiveDriveControllerParams, CacheSize>::AppendOscDataCallback;
+
+template<class ActiveDriveControllerParams, unsigned int CacheSize>
+OscGetter<ActiveDriveControllerParams, CacheSize>::OnOscFileAddedCallbackType OscGetter<ActiveDriveControllerParams, CacheSize>::OnOscFileAddedCallback;
 
 typedef OscGetter<ActiveDriveControllerParams, 13> OscGet;
 

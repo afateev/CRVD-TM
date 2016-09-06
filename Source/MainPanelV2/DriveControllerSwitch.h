@@ -37,6 +37,11 @@ public:
 		return pin1 && !pin2;
 	}
 	
+	static void IsPrimaryActive(bool &active)
+	{
+		active = IsPrimaryActive();
+	}
+	
 	// Резервный выбран
 	static bool IsReserveActive()
 	{
@@ -44,6 +49,11 @@ public:
 		bool pin2 = Port::Read(Pin2);
 		
 		return !pin1 && pin2;
+	}
+	
+	static void IsReserveActive(bool &active)
+	{
+		active = IsReserveActive();
 	}
 };
 

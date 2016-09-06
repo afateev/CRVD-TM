@@ -20,6 +20,7 @@ namespace MainPanel
 		typedef Rblib::FlashMemoryController FlashMemoryController;
 		typedef Rblib::Afio Afio;
 		typedef Rblib::Usb::OtgFs Usb;
+		typedef Rblib::InterruptMap InterruptMap;
 		
 		class Clock
 		{
@@ -197,6 +198,18 @@ namespace MainPanel
 						Port::ClearBit(Pin1);
 					}
 					break;
+				case 3:
+					{
+						Port::ClearBit(Pin0);
+						Port::SetBit(Pin1);
+					}
+					break;
+				case 4:
+					{
+						Port::SetBit(Pin0);
+						Port::SetBit(Pin1);
+					}
+					break;
 				}
 			}
 		};
@@ -235,9 +248,10 @@ namespace MainPanel
 				USB_PowerOn_Port::SetBit(USB_PowerOn_Pin);
 				
 				Nvic::InterruptEnable(Nvic::InterruptVector_OTG_FS);
+				/*
 				Usb::PowerOnCallback = PowerOn;
 				Usb::OnDeviceConnectedCallback = OnDeviceConnected;
-				Usb::Init();
+				Usb::Init();*/
 			}
 			
 			static void PowerOn(bool on = true)

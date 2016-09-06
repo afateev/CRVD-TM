@@ -23,7 +23,7 @@ public:
 	static const unsigned int OscRequestMaxPortionSize = oscRequestMaxPortionSize;
 	static const unsigned int OscBufferMaxPointsCount = 65535;
 	static const unsigned int OscFileSize = OscBufferMaxPointsCount * OscRecordSize;
-	static const unsigned int MaxFileCount = 3;
+	static const unsigned int MaxFileCount = 5;
 	static const unsigned int PortionSize = OscRecordSize * OscRequestMaxPortionSize;
 	static const unsigned int BufferSize = PortionSize * 2;
 	
@@ -217,7 +217,7 @@ public:
 			{
 				_fileNumber++;
 					
-				if (_fileNumber > MaxFileCount)
+				if (_fileNumber >= MaxFileCount)
 				{
 					bool result = false;
 					DeleteFileCallback(_fileNumber - MaxFileCount, result);

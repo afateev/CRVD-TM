@@ -1,6 +1,10 @@
 #ifndef STM32_REGISTER_H
 #define STM32_REGISTER_H
 
+#ifdef STM32
+#include "stm32\MemoryMap.h"
+#endif
+
 namespace Rblib
 {
 namespace Stm32

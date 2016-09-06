@@ -42,7 +42,7 @@ public:
 			OperatingTime = 0;
 		}
 	};
-	/*
+	
 	struct InsulationControllerDataStruct
 	{
 		unsigned int RIz;
@@ -51,7 +51,7 @@ public:
 		{
 			RIz = 0;
 		}
-	};*/
+	};
 	
 	struct EventsDataStruct
 	{
@@ -68,7 +68,7 @@ public:
 	};
 public:
 	ActiveDriveControllerDataStruct ActiveDriveController;
-	//InsulationControllerDataStruct InsulationController;
+	InsulationControllerDataStruct InsulationController;
 	EventsDataStruct Events;
 };
 
@@ -109,7 +109,7 @@ public:
 		PrintCosFi(displayData.ActiveDriveController.CosPhi, displayData.ActiveDriveController.FlagEngineOn, displayData.ActiveDriveController.FlagHasProblem);
 		PrintPreact(displayData.ActiveDriveController.Q, displayData.ActiveDriveController.FlagEngineOn, displayData.ActiveDriveController.FlagHasProblem);
 		
-		//PrintInsulationResistance(0, 16 + 1 + 32 + 1 + 16 * 6 + 8, displayData.InsulationController.RIz);
+		PrintInsulationResistance(0, 16 + 1 + 32 + 1 + 16 * 6 + 8, displayData.InsulationController.RIz);
 		
 		PrintMode(20, 16 + 1 + 32 + 1 + 16 * 6 + 8, displayData.ActiveDriveController.CosControl, displayData.ActiveDriveController.FlagRControl);
 		
@@ -300,8 +300,11 @@ public:
 		
 		display.MoveCursorTo(x, y);
 		display.WriteLine(eventDesc);
-		display.MoveCursorTo(x, y + 16);
-		display.WriteLine(eventParam);
+		if (eventParam)
+		{	
+			display.MoveCursorTo(x, y + 16);
+			display.WriteLine(eventParam);
+		}	
 		// непонятное время не будем выводить
 		if (dt > 0)
 			PrintDateTimeShort(40 - 16, y, dt);

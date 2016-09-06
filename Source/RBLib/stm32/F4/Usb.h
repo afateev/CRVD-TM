@@ -1243,7 +1243,7 @@ namespace Host
 	class Usb
 	{
 	public:
-		typedef OtgFs<1, 0x50000000> OtgFs;
+		typedef OtgFs<1, MemoryMap::USBOTGFS> OtgFs;
 	};
 }
 

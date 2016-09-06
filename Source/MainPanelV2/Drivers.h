@@ -38,7 +38,9 @@ namespace MainPanel
 		
 		typedef Max6951<SpiWrapper<Spi::_C, typename Board::Gpio::C, 7, false, false, false> > StatorDisplay;
 		typedef Max6951<SpiWrapper<Spi::_C, typename Board::Gpio::C, 6, false, false, false> > RotorDisplay;
+#ifdef SD_STORAGE
 		typedef MMC<SpiWrapper<Spi::_C, typename Board::Gpio::D, 0, false, false, true> > FlashType;
+#endif
 		
 		typedef Rblib::Driver::Rs485<typename Board::Rs485Interface> Rs485Type;
 		static Rs485Type Rs485;

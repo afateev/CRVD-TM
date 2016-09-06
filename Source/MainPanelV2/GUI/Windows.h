@@ -10,6 +10,7 @@
 #include "Window.h"
 #include "WindowMain.h"
 #include "WindowDebugRegisters.h"
+#include "WindowDebugOsc.h"
 #include "WindowEvents.h"
 #include "WindowConfigSystemDateTime.h"
 #include "WindowControllerNominalStatorCurrent.h"
@@ -24,6 +25,7 @@ enum WindowId
 	wndIdDesctop = -1,
 	wndIdMain = 0,
 	wndIdDebugRegisters,
+	wndIdDebugOsc,
 	wndIdEvents,
 	wndIdConfigSystemDateTime,
 	wndIdResetOperatingTime,

@@ -40,60 +40,53 @@ public:
 		int y = 16 * 2;
 		float val = 0;
 		bool valError = false;
-		static const char *formatString = "%s:     %c%4.2fВ %c";
+		static const char *formatString = "%s:     %+4.2fВ %c";
 		//len = sprintf(str, "%c| %c%4.2fВ| %s", '!', '+', 5.12, "Цифровое 1 +5В");
 		val = GetRegValue(7) / 100.0;
-		if (val < 0) val = -val;
 		valError = errorFlags & (1 << 6);
-		len = sprintf(str, formatString, "Цифровое 1   +5В", '+', val, valError ? '!' : ' ');
+		len = sprintf(str, formatString, "Цифровое 1   +5В", val, valError ? '!' : ' ');
 		display.MoveCursorTo(x, y);
 		display.WriteLine(str, len);
 		y += 16;
 		
 		val = GetRegValue(8) / 100.0;
-		if (val < 0) val = -val;
 		valError = errorFlags & (1 << 5);
-		len = sprintf(str, formatString, "Цифровое   +3.3В", '+', val, valError ? '!' : ' ');
+		len = sprintf(str, formatString, "Цифровое   +3.3В", val, valError ? '!' : ' ');
 		display.MoveCursorTo(x, y);
 		display.WriteLine(str, len);
 		y += 16;
 		
 		val = GetRegValue(9) / 100.0;
-		if (val < 0) val = -val;
 		valError = errorFlags & (1 << 4);
-		len = sprintf(str, formatString, "Аналоговое 1 +5В", '+', val, valError ? '!' : ' ');
+		len = sprintf(str, formatString, "Аналоговое 1 +5В", val, valError ? '!' : ' ');
 		display.MoveCursorTo(x, y);
 		display.WriteLine(str, len);
 		y += 16;
 		
-		val = (signed short)GetRegValue(10) / -100.0;
-		if (val < 0) val = -val;
+		val = (signed short)GetRegValue(10) / 100.0;
 		valError = errorFlags & (1 << 3);
-		len = sprintf(str, formatString, "Аналоговое 1 -5В", '-', val, valError ? '!' : ' ');
+		len = sprintf(str, formatString, "Аналоговое 1 -5В", val, valError ? '!' : ' ');
 		display.MoveCursorTo(x, y);
 		display.WriteLine(str, len);
 		y += 16;
 		
 		val = GetRegValue(11) / 100.0;
-		if (val < 0) val = -val;
 		valError = errorFlags & (1 << 2);
-		len = sprintf(str, formatString, "Аналоговое 2 +5В", '+', val, valError ? '!' : ' ');
+		len = sprintf(str, formatString, "Аналоговое 2 +5В", val, valError ? '!' : ' ');
 		display.MoveCursorTo(x, y);
 		display.WriteLine(str, len);
 		y += 16;
 		
-		val = (signed short)GetRegValue(12) / -100.0;
-		if (val < 0) val = -val;
+		val = (signed short)GetRegValue(12) / 100.0;
 		valError = errorFlags & (1 << 1);
-		len = sprintf(str, formatString, "Аналоговое 2 -5В", '-', val, valError ? '!' : ' ');
+		len = sprintf(str, formatString, "Аналоговое 2 -5В", val, valError ? '!' : ' ');
 		display.MoveCursorTo(x, y);
 		display.WriteLine(str, len);
 		y += 16;
 		
 		val = GetRegValue(13) / 100.0;
-		if (val < 0) val = -val;
 		valError = errorFlags & (1 << 0);
-		len = sprintf(str, formatString, "Цифровое 2   +5В", '+', val, valError ? '!' : ' ');
+		len = sprintf(str, formatString, "Цифровое 2   +5В", val, valError ? '!' : ' ');
 		display.MoveCursorTo(x, y);
 		display.WriteLine(str, len);
 		y += 16;

@@ -22,6 +22,7 @@ typedef DriveController<ModBusState, 0x02, 0x01, OscFileFormat::OscRecordSize> 	
 typedef ControllerDiagnostic<ModBusState, 0x01, 1, 17>	MainControllerDiagnostic;
 typedef ControllerDiagnostic<ModBusState, 0x02, 1, 17>	ReservControllerDiagnostic;
 typedef ControllerDiagnostic<ModBusState, 0x03, 1, 17>	ControllerDiagnosticTemperature;
+typedef InsulationControl<ModBusState, 0x01, 1, 10> 	InsulationController;
 
 DriveControllerInterface<PrimaryController, true>	PrimaryControllerInterface;
 DriveControllerInterface<ReserveController, false>	ReserveControllerInterface;
@@ -41,7 +42,7 @@ public:
 };
 
 
-typedef PortScanner<Drivers::Board::PortScanerConnection, PrimaryController, ReserveController, MainControllerDiagnostic, ReservControllerDiagnostic, ControllerDiagnosticTemperature> portScanner;
+//typedef PortScanner<Drivers::Board::PortScanerConnection, PrimaryController, ReserveController, MainControllerDiagnostic, ReservControllerDiagnostic, ControllerDiagnosticTemperature> portScanner;
 
 typedef DriveEventsGenerator<ActiveDriveControllerParams, Events> DriveEvets;
 

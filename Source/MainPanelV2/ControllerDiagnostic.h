@@ -12,7 +12,9 @@ class ControllerDiagnostic
 {
 public:
 	typedef Rblib::CallbackWrapper<bool> TxEnableCallbackType;
+	typedef Rblib::CallbackWrapper<> ModbusSelectCallbackType;
 	static TxEnableCallbackType TxEnableCallback;
+	static ModbusSelectCallbackType ModbusSelectCallback;
 protected:
 	enum State
 	{
@@ -23,6 +25,7 @@ protected:
 	};
 	
 	static State _state;
+	static unsigned int _regRequestCountdown;
 	static unsigned char _request[256];
 	static unsigned char *_response;
 	
@@ -30,31 +33,48 @@ protected:
 public:
 	static bool Run()
 	{
+		if (_regRequestCountdown > 0)
+		{
+			_regRequestCountdown--;
+		}
+		
 		switch(_state)
 		{
 		case StateRequest:
 			{
 				if (ModBus::IsReady())
 				{
-					ModBus::ChangeSpeed(Config::MainComPortClockSourceFrequency, 9600);
-					ModBus::WaitLastByteTx = true;
-					unsigned char address = BusAddres;
-                    unsigned int requestSize = ModBusMaster::BuildReadHoldingRegisters(_request, address, FirstReg, RegCount);
-					ModBus::OnTxCompleteCallback = OnTxCompleteCallback;
-					TxEnableCallback(true);
-					ModBus::SendRequest(_request, requestSize);
-					_state = StateWait;
+					if (_regRequestCountdown < 1)
+					{
+						ModBus::ChangeSpeed(Config::MainComPortClockSourceFrequency, 9600);
+						ModBus::WaitLastByteTx = true;
+						ModbusSelectCallback();
+						unsigned char address = BusAddres;
+						unsigned int requestSize = ModBusMaster::BuildReadHoldingRegisters(_request, address, FirstReg, RegCount);
+						ModBus::OnTxCompleteCallback = OnTxCompleteCallback;
+						TxEnableCallback(true);
+						ModBus::SendRequest(_request, requestSize);
+						
+						_regRequestCountdown = 1000;
+						
+						_state = StateWait;
+					}
 				}
 			}
 			break;
 		case StateWait:
 			{
-				if (ModBus::IsReady())
+				if (ModBus::IsReadComplete())
 					_state = StateResponse;
 			}
 			break;
 		case StateResponse:
 			{
+				if (!ModBus::IsReadComplete())
+				{
+					break;
+				}
+				
 				unsigned int readed = 0;
 				_response = ModBus::GetResponse(readed);
 				if (readed > 0 && 0 != _response)
@@ -167,9 +187,15 @@ template<class ModBus, unsigned char BusAddres, int FirstReg, int RegCount>
 ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::TxEnableCallbackType ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::TxEnableCallback;
 
 template<class ModBus, unsigned char BusAddres, int FirstReg, int RegCount>
+ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::ModbusSelectCallbackType ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::ModbusSelectCallback;
+
+template<class ModBus, unsigned char BusAddres, int FirstReg, int RegCount>
 typename ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::State
 ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::_state = 
 ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::StateRequest;
+
+template<class ModBus, unsigned char BusAddres, int FirstReg, int RegCount>
+unsigned int ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::_regRequestCountdown;
 
 template<class ModBus, unsigned char BusAddres, int FirstReg, int RegCount>
 unsigned char ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::_request[256];

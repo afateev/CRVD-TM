@@ -199,7 +199,12 @@ public:
 	{
 		struct tm * timeinfo;
 		timeinfo = localtime(&oscTime);
+#ifdef SD_STORAGE
 		size_t len = strftime(buffer, bufferSize, "/osc/%Y%m%d_%H%M%S", timeinfo);
+#endif
+#ifdef USB_STORAGE
+		size_t len = strftime(buffer, bufferSize, "osc/%Y%m%d_%H%M%S", timeinfo);
+#endif
 		
 		if (len > 0)
 		{

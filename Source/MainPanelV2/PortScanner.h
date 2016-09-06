@@ -8,6 +8,9 @@
 #define PORTSCANNER_H
 
 //#include "MegaLib\MegaLib.h"
+#ifdef SetBit
+#undef SetBit
+#endif
 
 template<
 		class Connection,		// конфигурация схемы подключения

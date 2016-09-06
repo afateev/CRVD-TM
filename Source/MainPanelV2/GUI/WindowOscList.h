@@ -57,7 +57,7 @@ public:
 		}
 		
 		short progress = OscList::GetProgress();
-		
+		/*
 		if (progress != 100)
 		{
 			len = sprintf(str, "Выполняется сохранение осциллограммы");
@@ -73,7 +73,7 @@ public:
 			display.WriteLine(str, len);
 			return;
 		}
-		
+		*/
 		for (int i = 0; i < OscList::_oscCountInCache; i++)
 		{
 			DrawOsc(Osc(OscList::_oscCache[OscList::_oscCountInCache - i - 1]), _headerHeight + i * 16);
@@ -143,6 +143,11 @@ public:
 	{
 		_onUpdatePosPending = true;
 		_onUpdatePosGetOscCount = getOscCount;
+	}
+	
+	void OnFileAdded()
+	{
+		OnUpdatePos(true);
 	}
 	
 	void DoLoPiorityWork()

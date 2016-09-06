@@ -11,6 +11,10 @@
 #include "OscFileFormat.h"
 #include <math.h>
 
+#ifdef USB_STORAGE
+#include "ff.h"
+#endif
+
 class DataSourceBase
 {
 public:
@@ -850,8 +854,13 @@ protected:
 	OscFileFormat::AnalogValuesStruct _analogValues;
 	OscFileFormat::DataStruct _record;
 	int curRecord;
-	
+#ifdef SD_STORAGE
 	FL_FILE *oscFile;
+#endif
+#ifdef USB_STORAGE
+	FIL oscFile;
+	bool oscFileOpened;
+#endif
 public:	
 	//GraphLinePointStruct PointsCache[2][PointsCacheSize];
 	//unsigned short PointsInCache[2];
@@ -859,7 +868,12 @@ public:
 	OscSource()
 	{
 		Init(0, 0);
+#ifdef SD_STORAGE
 		oscFile = 0;
+#endif
+#ifdef USB_STORAGE
+		oscFileOpened = false;
+#endif
 		//PointsInCache[0] = 0;
 		//PointsInCache[1] = 0;
 	}
@@ -878,15 +892,20 @@ public:
 		_analogValues = OscFileFormat::AnalogValuesStruct();
 		_record = OscFileFormat::DataStruct();
 		curRecord = -1;
-		
+#ifdef SD_STORAGE
 		oscFile = 0;
+#endif
 		
 		if (fileName == 0 || fileNameLen == 0)
 		{
 			return;
 		}
-		
+#ifdef SD_STORAGE
 		char *path = "/osc/";
+#endif
+#ifdef USB_STORAGE
+		char *path = "osc/";
+#endif
 		unsigned char i = 0;
 		unsigned char j = 0;
 		for (; j < strlen(path) && i < FileNameMaxLen - 1; i++, j++)
@@ -904,7 +923,7 @@ public:
 		{
 			_fileName[i] = 0;
 		}
-		
+#ifdef SD_STORAGE
 		oscFile = (FL_FILE*)fl_fopen(_fileName, "r");
 	
 		if (oscFile)
@@ -935,6 +954,41 @@ public:
 			fl_fclose(oscFile);
 			oscFile = 0;
 		}
+#endif
+#ifdef USB_STORAGE
+		bool res = true;
+		res &= f_open(&oscFile, _fileName, FA_READ) == FR_OK;
+		if (res)
+		{
+			unsigned int bytesread = 0;
+			res &= f_read(&oscFile, &_header, sizeof(_header), &bytesread) == FR_OK;
+			res &= bytesread == sizeof(_header);
+			if (res)
+			{
+#ifdef OSC_V2
+				res &= _header.Version == 0x0200;
+#endif
+#ifdef OSC_V3
+				res &= _header.Version == 0x0300;
+#endif
+			}
+			
+			if (res)
+			{
+				unsigned int bytesread = 0;
+				res &= f_read(&oscFile, &_analogValues, sizeof(_analogValues), &bytesread) == FR_OK;
+				res &= bytesread == sizeof(_analogValues);
+			}
+			
+			if (!res)
+			{
+				_header = OscFileFormat::HeaderStruct();
+				_analogValues = OscFileFormat::AnalogValuesStruct();
+			}
+			
+			f_close(&oscFile);
+		}
+#endif
 	}
 	
 	virtual int GetMinPoint()
@@ -997,13 +1051,24 @@ public:
 	
 	void OpenFile()
 	{
+#ifdef SD_STORAGE
 		oscFile = (FL_FILE*)fl_fopen(_fileName, "r");
+#endif
+#ifdef USB_STORAGE
+		oscFileOpened = f_open(&oscFile, _fileName, FA_READ) == FR_OK;
+#endif
 	}
 	
 	void CloseFile()
 	{
+#ifdef SD_STORAGE		
 		fl_fclose(oscFile);
 		oscFile = 0;
+#endif
+#ifdef USB_STORAGE
+		f_close(&oscFile);
+		oscFileOpened = false;
+#endif
 	}
 	
 	virtual bool GetValue(int point, float &v)
@@ -1069,7 +1134,7 @@ public:
 		bool res = false;
 		
 		
-	
+#ifdef SD_STORAGE
 		if (oscFile)
 		{
 			long int offset = sizeof(_header);
@@ -1088,6 +1153,29 @@ public:
 				v = GetValueFromCurrentRecord(sourceId);
 			}
 		}
+#endif
+#ifdef USB_STORAGE
+		if (oscFileOpened)
+		{
+			long int offset = sizeof(_header);
+			offset += sizeof(_analogValues);
+			offset += sizeof(_record) * p;
+			
+			res = f_lseek(&oscFile, offset) == FR_OK;
+			if (res)
+			{
+				unsigned int bytesread = 0;
+				res = f_read(&oscFile, &_record, sizeof(_record), &bytesread) == FR_OK;
+				res = bytesread == sizeof(_record);
+			}
+			
+			if (res)
+			{
+				curRecord = point;
+				v = GetValueFromCurrentRecord(sourceId);
+			}
+		}
+#endif
 		
 		return res;
 	}

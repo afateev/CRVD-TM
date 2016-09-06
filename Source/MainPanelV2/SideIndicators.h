@@ -10,10 +10,12 @@
 template<class StatorIndicator, class RotorIndicator, class ActiveDriveControllerParams>
 class SideIndicators
 {
+protected:
+	bool _inited;
 public:
 	SideIndicators()
 	{
-		
+		_inited = false;
 	}
 	void Init()
 	{
@@ -21,10 +23,17 @@ public:
 		RotorIndicator::Init();
 		StatorIndicator::Enable();
 		RotorIndicator::Enable();
+		
+		_inited = true;
 	}
 	
 	void Update()
 	{
+		if (!_inited)
+		{
+			return;
+		}
+		
 		bool problem = ActiveDriveControllerParams::HasProblem();
 
         // Отображаем в киловольтах
@@ -38,6 +47,11 @@ public:
 	
 	void UpdateStator(float u, float i, bool problem)
 	{
+		if (!_inited)
+		{
+			return;
+		}
+		
 		char uValue[10];
 		char iValue[10];
 		char str[10];
@@ -82,6 +96,11 @@ public:
 	
 	void UpdateRotor(float u, float i, bool problem)
 	{
+		if (!_inited)
+		{
+			return;
+		}
+		
 		char uValue[10];
 		char iValue[10];
 		char str[10];

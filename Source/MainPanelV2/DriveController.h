@@ -113,12 +113,16 @@ public:
 	static const int OscRequestMaxPortionSize = 250 / OscRecordSize;
 	
 	typedef Rblib::CallbackWrapper<> ModbusSelectCallbackType;
+	typedef Rblib::CallbackWrapper<bool &> GetActiveStateCallbackType;
 	typedef Rblib::CallbackWrapper<bool &> AllowOscReadCallbackType;
 	typedef Rblib::CallbackWrapper<unsigned int, unsigned char *, int> OnOscReadedCallbackType;
 	typedef Rblib::CallbackWrapper<OscType, unsigned int> OnOscEventCallbackType;
+	typedef Rblib::CallbackWrapper<unsigned short &> GetOscPointerSyncValueCallbackType;
+	typedef Rblib::CallbackWrapper<unsigned int> SyncOscLoadedPosCallbackType;
 protected:
 	enum State
 	{
+		StateInit,
 		StateRequest,		// отправка запроса
 		StateWait,			// ожидание ответа
 		StateResponse,		// обработка ответа
@@ -140,6 +144,7 @@ protected:
     static const RequestInfo requests[2];
 	
 	static State _state;
+	static bool _imActive;
 	static unsigned char _request[_registersCount];
 	static unsigned char *_response;
 	
@@ -166,20 +171,22 @@ protected:
 public:	
 	static bool DoOnlyLowerRegsRequest;
 	static ModbusSelectCallbackType ModbusSelectCallback;
+	static GetActiveStateCallbackType GetActiveStateCallback;
 	static AllowOscReadCallbackType AllowOscReadCallback;
 	static OnOscReadedCallbackType OnOscReadedCallback;
 	static OnOscEventCallbackType OnOscEventCallback;
+	static GetOscPointerSyncValueCallbackType GetOscPointerSyncValueCallback;
+	static SyncOscLoadedPosCallbackType SyncOscLoadedPosCallback;
 public:
 	static void Init()
 	{
 		ResetOscEventPointers();
-		SetRegValue(RegOscSync, 0);
 		_oscLoadedPos = 0;
 	}
 	
 	static bool ImActive()
 	{
-		return _address == 1;
+		return _imActive;
 	}
 	
 	static void ResetOscEventPointers()
@@ -190,8 +197,10 @@ public:
 		}
 	}
 	
-	static void UpdateOscEventPointers()
+	static bool UpdateOscEventPointers()
 	{
+		bool needReset = false;
+		
 		for (int i = 0; i < OscTypeCount; i++)
 		{
 			OscType oscType = (OscType)i;
@@ -225,6 +234,8 @@ public:
 				break;
 			}
 			
+			needReset |= currentPtr != 0xFFFF;
+			
 			// если не было события, а сейчас возникло
 			// при инициализации -1, при первом чтении просто перезапишется
 			// если в данный момент есть событие но неизвестно было ли оно до запуска, т.е. в буфере -1, то считаем что оно возникло до запуска и не обрабатываем
@@ -236,6 +247,8 @@ public:
 			
 			_oscEventPointer[i] = currentPtr;
 		}
+		
+		return needReset;
 	}
 	
 	static int GetOscLoadCount()
@@ -267,8 +280,24 @@ public:
 		return res;
 	}
 	
+	static unsigned int GetLoadedOscPos()
+	{
+		return _oscLoadedPos;
+	}
+	
 	static bool Run()
 	{
+		GetActiveStateCallback(_imActive);
+		
+		if (_imActive)
+		{
+			_address = 1;
+		}
+		else
+		{
+			_address = 2;
+		}
+		
 		bool allowOscRead = false;
 		AllowOscReadCallback(allowOscRead);
 		
@@ -287,6 +316,12 @@ public:
 		
 		switch(_state)
 		{
+		case StateInit:
+			{
+				SetRegValue(RegOscSync, 0);
+				_state = StateRequest;
+			}
+			break;
 		case StateRequest:
 			{
 				if (ModBus::IsReady())
@@ -351,6 +386,7 @@ public:
 							{
 								if (allowOscRead)
 								{
+										ModBus::ChangeSpeed(Config::MainComPortClockSourceFrequency, 115200);
 										ModbusSelectCallback();
 										unsigned int requestSize = ModBusMaster::BuildReadOscPoints(_request, _address, _oscLoadedPos, loadCount);
 										ModBus::SendRequest(_request, requestSize);
@@ -381,6 +417,9 @@ public:
 				{
 					break;
 				}
+				
+				bool notSyncDetected = false;
+				unsigned short prevOscPointer = 0;
 				
 				unsigned int readed = 0;
 				_response = ModBus::GetResponse(readed);
@@ -415,9 +454,22 @@ public:
 								regValue <<= 8;
 								regValue |= _response[regPtr + 1];
 								
+								if (reg == RegOscCurPos)
+								{
+									prevOscPointer = _registers[reg];
+								}
+								
 								_registers[reg] = regValue;
                             	//_editedRegisters[reg] = _registers[reg];
 								_regState[reg].Has = true;
+								
+								if (reg == RegOscSync)
+								{
+									if (regValue == 0)
+									{
+										notSyncDetected = true;
+									}
+								}
 								
 								regPtr += 2;
 							}
@@ -427,8 +479,29 @@ public:
 								// если получены свежие данные об указателях осциллограмм
 								if (firstReg <= RegOscEngineStart && firstReg + regQuantity >= RegOscChechoutStop)
 								{
-									UpdateOscEventPointers();
+									if (!notSyncDetected)
+									{
+										if (UpdateOscEventPointers())
+										{
+											// reset osc pointers
+											for (int r = RegOscEngineStart; r <= RegOscChechoutStop; r++)
+											{
+												SetRegValue(r, 0xFFFF);
+											}
+										}
+									}
 								}
+								
+								if (notSyncDetected)
+								{
+									SetRegValue(RegOscSync, prevOscPointer);
+								}
+							}
+							else
+							{
+								unsigned short oscPointerSyncValue = 0;
+								GetOscPointerSyncValueCallback(oscPointerSyncValue);
+								SetRegValue(RegOscSync, oscPointerSyncValue);
 							}
 						}
 						
@@ -445,6 +518,11 @@ public:
 								if (_oscLoadedPos >= 0xFFFF)
 								{
 									_oscLoadedPos = 0;
+								}
+								
+								if (ImActive())
+								{
+									SyncOscLoadedPosCallback(_oscLoadedPos);
 								}
 								
 								/*
@@ -464,11 +542,6 @@ public:
                     {
                         _problemCount++;
                     }
-                    
-                    if (_address == MainAddress)
-						_address = AdditionalAddress;
-					else
-						_address = MainAddress;
 				}
 				//_state = StateComplete;
                 _state = StateCheckChanges;
@@ -483,7 +556,7 @@ public:
                     {
                         if (i != RegOscSync && i < 100)
 						{
-							continue;
+							//continue;
 						}
 						
 						if (i == 0)
@@ -493,16 +566,20 @@ public:
                         
                         if (_regState[i].Has && _regState[i].Edited)
                         {
-                            if (_registers[i] != _editedRegisters[i] || i == RegOscSync)
+                            if (_registers[i] != _editedRegisters[i])
                             {
-                                ModbusSelectCallback();
+                                ModBus::ChangeSpeed(Config::MainComPortClockSourceFrequency, 115200);
+								ModbusSelectCallback();
 								unsigned int requestSize = ModBusMaster::BuildWriteHoldingRegister(_request, _address, i, _editedRegisters[i]);
 					            
 					            ModBus::SendRequest(_request, requestSize);
                             
                                 //_editedRegisters[i] = _registers[i];
                                 changed = true;
-                                _writeReg97 = true;
+								if (i >= 100)
+								{
+                                	_writeReg97 = true;
+								}
                                 _regState[i].Edited = false;
                                 break;
                             }
@@ -512,7 +589,8 @@ public:
                     // новых изменений нет, но раньше были
                     if (!changed && _writeReg97)
                     {
-                        ModbusSelectCallback();
+                        ModBus::ChangeSpeed(Config::MainComPortClockSourceFrequency, 115200);
+						ModbusSelectCallback();
 						unsigned int requestSize = ModBusMaster::BuildWriteHoldingRegister(_request, _address, 97, 0xAA);
 			            ModBus::SendRequest(_request, requestSize);
                         changed = true;
@@ -655,6 +733,16 @@ public:
 		return _registersCount - 1;
 	}
 	
+	static void GetOscPointerSyncValue(unsigned short &val)
+	{
+		val = GetRegValue(RegOscCurPos);
+	}
+	
+	static void SyncOscLoadedPos(unsigned int val)
+	{
+		_oscLoadedPos = val;
+	}
+	
 	static bool OscRequest(unsigned char *dst, unsigned int StartPoint, unsigned int PointsCount)
 	{
 		if (_oscRequestWait)
@@ -711,15 +799,27 @@ template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress
 DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::AllowOscReadCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::AllowOscReadCallback;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::GetActiveStateCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::GetActiveStateCallback;
+
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscReadedCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscReadedCallback;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscEventCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscEventCallback;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::GetOscPointerSyncValueCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::GetOscPointerSyncValueCallback;
+
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::SyncOscLoadedPosCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::SyncOscLoadedPosCallback;
+
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 typename DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::State
 DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_state = 
-DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::StateRequest;
+DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::StateInit;
+
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+bool DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_imActive = MainAddres == 1;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 unsigned char DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_request[256];

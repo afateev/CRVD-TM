@@ -38,9 +38,16 @@ namespace F4
 		};
 		typedef CallbackWrapper<FaultCode> FaultHandlerType;
 		
+		typedef CallbackWrapper<> SysTickHandlerType;
+		typedef CallbackWrapper<> OTG_FS_HandlerType;
+		typedef CallbackWrapper<> OTG_HS_HandlerType;
+		
 	public:
 		static UndefinedInterruptHandlerType UndefinedInterruptHandler;
 		static FaultHandlerType FaultHandler;
+		static SysTickHandlerType SysTickHandler;
+		static OTG_HS_HandlerType OTG_FS_Handler;
+		static OTG_HS_HandlerType OTG_HS_Handler;
 	public:
 		static void NMI()
 		{
@@ -81,7 +88,7 @@ namespace F4
 		
 		static void SystemTick()
 		{
-			
+			SysTickHandler();
 		}
 		
 		static void WWDG()
@@ -371,6 +378,7 @@ namespace F4
 		
 		static void OTG_FS()
 		{
+			OTG_FS_Handler();
 			Usb::OtgFs::InterruptHandler();
 		}
 		
@@ -412,6 +420,7 @@ namespace F4
 		
 		static void OTG_HS()
 		{
+			OTG_HS_Handler();
 		}
 		
 		static void DCMI()
@@ -484,6 +493,15 @@ namespace F4
 	
 	template < int platformId >
 		InterruptMap<platformId>::FaultHandlerType InterruptMap<platformId>::FaultHandler;
+	
+	template < int platformId >
+		InterruptMap<platformId>::SysTickHandlerType InterruptMap<platformId>::SysTickHandler;
+	
+	template < int platformId >
+		InterruptMap<platformId>::OTG_FS_HandlerType InterruptMap<platformId>::OTG_FS_Handler;
+	
+	template < int platformId >
+		InterruptMap<platformId>::OTG_HS_HandlerType InterruptMap<platformId>::OTG_HS_Handler;
 	
 	typedef void( *intfunc )( void );
 	typedef union { intfunc __fun; void * __ptr; } intvec_elem;

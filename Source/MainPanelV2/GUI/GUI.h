@@ -64,6 +64,7 @@ MenuItem menuDiagnostic("Диагностика", &menuListDiagnostic);
 
 MenuItem menuGraph("Осциллограмма", ShowOsc);
 MenuItem menuDebugRegisters("Регистры", ShowWindow<wndIdDebugRegisters>);
+MenuItem menuDebugOsc("Осциллограммы", ShowWindow<wndIdDebugOsc>);
 MenuItem menuMainScreen("Выход", ShowWindow<wndIdMain>);
 MenuItem menuHideAll("Закрыть все окна", ShowWindow<wndIdDesctop>);
 
@@ -88,6 +89,7 @@ MenuItem menuControllerSplitterController("----------Параметры реглятора--------
 
 WindowMain<Display, display, MainWindowDisplayData> wndMain;
 WindowDebugRegisters<Display, display> wndDebugRegisters;
+WindowDebugOsc<Display, display> wndDebugOsc;
 WindowEvents<Display, display> wndEvents;
 WindowConfigSystemDateTime<Display, display> wndConfigSystemDateTime(&menuBigFont);
 WindowResetOperatingTime<Display, display> wndResetOperatingTime(&menuBigFont);
@@ -143,11 +145,13 @@ void MenuInit()
 	//menuListDiagnostic.Add(&menuDiagnosticAnalogOutputs);
 	//menuListDiagnostic.Add(&menuDiagnosticLinkStatus);
 	menuListDiagnostic.Add(&menuDebugRegisters);
+	menuListDiagnostic.Add(&menuDebugOsc);
 		
 	mainMenu.SetRoot(&menuListRoot);
 }
 
 void GetMainWindowDisplayData(MainWindowDisplayData &displayData);
+void GetDebugOscDisplayData(WindowDebugOsc<Display, display>::DisplayData &data);
 
 void DesctopInit()
 {
@@ -164,6 +168,10 @@ void DesctopInit()
 	wndDebugRegisters.ReserveDiagnosticGetRegValueCallback = ReservControllerDiagnostic::GetRegValue;
 	//wndDebugRegisters.InsulationControllerGetAddressCallback = InsulationController::GetAddress;
 	//wndDebugRegisters.InsulationControllerGetRegValueCallback = InsulationController::GetRegValue;
+	
+	wndDebugOsc.SetOnClose(OnWindowClose);
+	wndDebugOsc.GetDisplayDataCallback = GetDebugOscDisplayData;
+	
 	wndEvents.SetOnClose(OnWindowClose);
 	wndConfigSystemDateTime.SetOnClose(OnWindowClose);
 	wndResetOperatingTime.SetOnClose(OnWindowClose);
@@ -182,6 +190,7 @@ void DesctopInit()
 	desctop.RegisterWindow(&wndOscList, wndIdOscList);
 	desctop.RegisterWindow(&wndGraph, wndIdGraph);
 	desctop.RegisterWindow(&wndDebugRegisters, wndIdDebugRegisters);
+	desctop.RegisterWindow(&wndDebugOsc, wndIdDebugOsc);
 	desctop.RegisterWindow(&wndEvents, wndIdEvents);
 	desctop.RegisterWindow(&wndConfigSystemDateTime, wndIdConfigSystemDateTime);
 	desctop.RegisterWindow(&wndResetOperatingTime, wndIdResetOperatingTime);

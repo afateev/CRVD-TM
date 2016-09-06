@@ -26,6 +26,7 @@ public:
 	virtual bool OscResponseReady(unsigned int &StartPoint, unsigned int &PointsCount) = 0;
 	virtual bool IsWaitRegistersResponse() = 0;
 	virtual void SetDoOnlyLowerRegsRequest(bool value) = 0;
+	virtual unsigned int GetLoadedOscPos() = 0;
 };
 
 template<class DriveController, bool Primary>
@@ -95,6 +96,11 @@ public:
 	virtual void SetDoOnlyLowerRegsRequest(bool value)
 	{
 		DriveController::DoOnlyLowerRegsRequest = value;
+	}
+	
+	virtual unsigned int GetLoadedOscPos()
+	{
+		return DriveController::GetLoadedOscPos();
 	}
 };
 
@@ -931,6 +937,14 @@ public:
         memcpy(&res, &data, 4);
         return res;
 	}
+	
+	static unsigned int GetLoadedOscPos()
+	{
+		if (0 == _activeController)
+			return 0;
+		
+		return _activeController->GetLoadedOscPos();
+	}
 protected:
 	static bool GetFlag(unsigned char reg, unsigned char bit)
 	{
@@ -1014,7 +1028,7 @@ float DriveControllerParams<ControllerInterfaceType, Config>::_indicationParams[
 template<class ControllerInterfaceType, class Config>
 float DriveControllerParams<ControllerInterfaceType, Config>::_modbusParams[DriveControllerParams<ControllerInterfaceType, Config>::ModbusParamLast];
 
-
+#ifdef SD_STORAGE
 template<class ControllerInterfaceType, class Config>
 const char DriveControllerParams<ControllerInterfaceType, Config>::_fileUptime[] = "/uptime.bin";
 
@@ -1023,6 +1037,18 @@ const char DriveControllerParams<ControllerInterfaceType, Config>::_fileIndicati
 
 template<class ControllerInterfaceType, class Config>
 const char DriveControllerParams<ControllerInterfaceType, Config>::_fileModbusParams[] = "/mbus_params.bin";
+#endif
+
+#ifdef USB_STORAGE
+template<class ControllerInterfaceType, class Config>
+const char DriveControllerParams<ControllerInterfaceType, Config>::_fileUptime[] = "uptime.bin";
+
+template<class ControllerInterfaceType, class Config>
+const char DriveControllerParams<ControllerInterfaceType, Config>::_fileIndicationParams[] = "i_params.bin";
+
+template<class ControllerInterfaceType, class Config>
+const char DriveControllerParams<ControllerInterfaceType, Config>::_fileModbusParams[] = "mbus_params.bin";
+#endif
 
 template<class ControllerInterfaceType, class Config>
 bool DriveControllerParams<ControllerInterfaceType, Config>::_loadedIndicationParams = false;
