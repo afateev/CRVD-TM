@@ -554,16 +554,6 @@ public:
                     bool changed = false;
                     for (unsigned int i = 0; i < 256; i++)
                     {
-                        if (i != RegOscSync && i < 100)
-						{
-							//continue;
-						}
-						
-						if (i == 0)
-                        {
-                            _writeReg97 = false;
-                        }
-                        
                         if (_regState[i].Has && _regState[i].Edited)
                         {
                             if (_registers[i] != _editedRegisters[i])
