@@ -49,7 +49,7 @@ void GetMainWindowDisplayData(MainWindowDisplayData &displayData)
 
 void GetDebugOscDisplayData(WindowDebugOsc<Display, display>::DisplayData &data)
 {
-	//data.CacheFileNumber
+	data.CacheFileNumber = OscCache.GetCurrentFileNumber();
 	data.CurrentOscPos = ActiveDriveControllerParams::GetRegValue(ActiveDriveControllerParams::RegOscCurPos);
 	data.LoadedOscPos = ActiveDriveControllerParams::GetLoadedOscPos();
 }
