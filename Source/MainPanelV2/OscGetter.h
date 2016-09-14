@@ -107,6 +107,18 @@ public:
 		_oscEventPending[oscType].Pointer = pointer;
 	}
 	
+	static void OscEventPending(bool &pending)
+	{
+		for (int i = 0; i < OscFileFormat::OscTypeCount; i++)
+		{
+			if (_oscEventPending[i].Pointer > 0)
+			{
+				pending = true;
+				break;
+			}
+		}
+	}
+	
 	static bool Run()
 	{
 		for (int i = 0; i < OscFileFormat::OscTypeCount; i++)

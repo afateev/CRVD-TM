@@ -472,8 +472,10 @@ int main()
 	
 	PrimaryController::ModbusSelectCallback = Drivers::Board::PortScanerConnection::Select<1>;
 	PrimaryController::AllowOscReadCallback.Set(OscCacheType::AllowRead, &OscCache);
+	PrimaryController::AllowOscSkipCallback = OscGet::OscEventPending;
 	PrimaryController::GetActiveStateCallback = ControllerSwitch::IsPrimaryActive;
 	PrimaryController::OnOscReadedCallback.Set(OscCacheType::StoreOscPart, &OscCache);
+	PrimaryController::OnOscReadSkipCallback.Set(OscCacheType::SkipOscRead, &OscCache);
 	PrimaryController::OnOscEventCallback = OnPrimaryOscEvent;
 	PrimaryController::GetOscPointerSyncValueCallback = ReserveController::GetOscPointerSyncValue;
 	PrimaryController::SyncOscLoadedPosCallback = ReserveController::SyncOscLoadedPos;
@@ -481,8 +483,10 @@ int main()
 	
 	ReserveController::ModbusSelectCallback = Drivers::Board::PortScanerConnection::Select<2>;
 	ReserveController::AllowOscReadCallback.Set(OscCacheType::AllowRead, &OscCache);
+	ReserveController::AllowOscSkipCallback = OscGet::OscEventPending;
 	ReserveController::GetActiveStateCallback = ControllerSwitch::IsReserveActive;
 	ReserveController::OnOscReadedCallback.Set(OscCacheType::StoreOscPart, &OscCache);
+	ReserveController::OnOscReadSkipCallback.Set(OscCacheType::SkipOscRead, &OscCache);
 	ReserveController::OnOscEventCallback = OnReserveOscEvent;
 	ReserveController::GetOscPointerSyncValueCallback = PrimaryController::GetOscPointerSyncValue;
 	ReserveController::SyncOscLoadedPosCallback = PrimaryController::SyncOscLoadedPos;

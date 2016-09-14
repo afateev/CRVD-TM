@@ -43,6 +43,8 @@ protected:
 	unsigned int _bufferPos;
 	unsigned char _buffer[BufferSize];
 	unsigned int _loadedPos;
+	unsigned int _skipCount;
+	bool _skipWrap;
 public:
 	OscCacheImplementer()
 	{
@@ -50,6 +52,8 @@ public:
 		_fileNumber = 0;
 		_bufferPos = 0;
 		_loadedPos = 0;
+		_skipCount = 0;
+		_skipWrap = false;
 	}
 	
 	bool AllowRead()
@@ -109,6 +113,24 @@ public:
 		}
 		
 		im->StoreOscPart(offset, data, dataCount);
+	}
+	
+	void SkipOscRead(unsigned int skipCount, bool wrap)
+	{
+		_skipCount = skipCount;
+		_skipWrap = wrap;
+	}
+	
+	static void SkipOscRead(void *callbackParam, unsigned int skipCount, bool wrap)
+	{
+		OscCacheImplementer *im = (OscCacheImplementer *)callbackParam;
+		
+		if (!im)
+		{
+			return;
+		}
+		
+		im->SkipOscRead(skipCount, wrap);
 	}
 	
 	unsigned int GetCurrentFileNumber()
@@ -187,6 +209,12 @@ public:
 			break;
 		case StateFillBuffer:
 			{
+				if (_skipWrap)
+				{
+					_skipWrap = false;
+					_bufferPos = 0;
+					_state = StateNextFile;
+				}
 			}
 			break;
 		case StateSaveBuffer:

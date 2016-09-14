@@ -115,7 +115,9 @@ public:
 	typedef Rblib::CallbackWrapper<> ModbusSelectCallbackType;
 	typedef Rblib::CallbackWrapper<bool &> GetActiveStateCallbackType;
 	typedef Rblib::CallbackWrapper<bool &> AllowOscReadCallbackType;
+	typedef Rblib::CallbackWrapper<bool &> AllowOscSkipCallbackType;
 	typedef Rblib::CallbackWrapper<unsigned int, unsigned char *, int> OnOscReadedCallbackType;
+	typedef Rblib::CallbackWrapper<unsigned int, bool> OnOscReadSkipCallbackType;
 	typedef Rblib::CallbackWrapper<OscType, unsigned int> OnOscEventCallbackType;
 	typedef Rblib::CallbackWrapper<unsigned short &> GetOscPointerSyncValueCallbackType;
 	typedef Rblib::CallbackWrapper<unsigned int> SyncOscLoadedPosCallbackType;
@@ -173,7 +175,9 @@ public:
 	static ModbusSelectCallbackType ModbusSelectCallback;
 	static GetActiveStateCallbackType GetActiveStateCallback;
 	static AllowOscReadCallbackType AllowOscReadCallback;
+	static AllowOscSkipCallbackType AllowOscSkipCallback;
 	static OnOscReadedCallbackType OnOscReadedCallback;
+	static OnOscReadSkipCallbackType OnOscReadSkipCallback;
 	static OnOscEventCallbackType OnOscEventCallback;
 	static GetOscPointerSyncValueCallbackType GetOscPointerSyncValueCallback;
 	static SyncOscLoadedPosCallbackType SyncOscLoadedPosCallback;
@@ -380,6 +384,46 @@ public:
 						// осциллограмму вычитываем только из активного регулятора, а он имеет всегда адрес №1
 						if (ImActive())
 						{
+							bool eventPending = false;
+							AllowOscSkipCallback(eventPending);
+							
+							if (!eventPending)
+							{
+								int curPos = GetRegValue(RegOscCurPos);
+								int delta = curPos - _oscLoadedPos;
+								if (delta < 0)
+								{
+									delta = 65535 - _oscLoadedPos + curPos;
+								}
+								
+								if (delta >= 60000)
+								{
+									_oscLoadedPos += delta;
+									bool wrap = false;
+									if (_oscLoadedPos > 65555)
+									{
+										_oscLoadedPos = 0;
+										wrap = true;
+									}
+									
+									OnOscReadSkipCallback(delta * OscRecordSize, wrap);
+								}
+								else
+								{
+									if (delta >= 10000)
+									{
+										_oscLoadedPos += 5000;
+										bool wrap = false;
+										if (_oscLoadedPos > 65555)
+										{
+											_oscLoadedPos = 0;
+											wrap = true;
+										}
+										OnOscReadSkipCallback(5000 * OscRecordSize, wrap);
+									}
+								}
+							}
+								
 							int loadCount = GetOscLoadCount();
 							
 							if (loadCount >= OscRequestMaxPortionSize)
@@ -789,10 +833,16 @@ template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress
 DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::AllowOscReadCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::AllowOscReadCallback;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::AllowOscSkipCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::AllowOscSkipCallback;
+
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::GetActiveStateCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::GetActiveStateCallback;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscReadedCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscReadedCallback;
+
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscReadSkipCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscReadSkipCallback;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscEventCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscEventCallback;
