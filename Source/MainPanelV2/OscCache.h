@@ -15,6 +15,8 @@ public:
 		StateInit,
 		StateCreateNewFile,
 		StateFillBuffer,
+		StateSendSequest,
+		StateWaitPart,
 		StateSaveBuffer,
 		StateNextFile
 	};
@@ -31,11 +33,15 @@ public:
 	typedef Rblib::CallbackWrapper<unsigned int, unsigned int, bool &> CreateFileCallbackType;
 	typedef Rblib::CallbackWrapper<unsigned int, bool &> DeleteFileCallbackType;
 	typedef Rblib::CallbackWrapper<unsigned int, unsigned int, unsigned char *, unsigned int, bool &> WriteFileCallbackType;
+	typedef Rblib::CallbackWrapper<unsigned int, bool &> SendRequestCallbackType;
+	typedef Rblib::CallbackWrapper<bool &> AllowOscSkipCallbackType;
 public:
 	FileSystemReadyCallbackType FileSystemReadyCallback;
 	CreateFileCallbackType CreateFileCallback;
 	DeleteFileCallbackType DeleteFileCallback;
 	WriteFileCallbackType WriteFileCallback;
+	SendRequestCallbackType SendRequestCallback;
+	AllowOscSkipCallbackType AllowOscSkipCallback;
 protected:
 	State _state;
 	unsigned int _fileNumber;
@@ -43,8 +49,9 @@ protected:
 	unsigned int _bufferPos;
 	unsigned char _buffer[BufferSize];
 	unsigned int _loadedPos;
-	unsigned int _skipCount;
-	bool _skipWrap;
+	unsigned int _oscPos;
+	bool _oscRollower;
+	unsigned int _requestPos;
 public:
 	OscCacheImplementer()
 	{
@@ -52,8 +59,9 @@ public:
 		_fileNumber = 0;
 		_bufferPos = 0;
 		_loadedPos = 0;
-		_skipCount = 0;
-		_skipWrap = false;
+		_oscPos = 0;
+		_oscRollower = false;
+		_requestPos = 0;
 	}
 	
 	bool AllowRead()
@@ -73,10 +81,29 @@ public:
 		allow = im->AllowRead();
 	}
 	
+	void OscPosUpdated(unsigned int pos, bool rollower)
+	{
+		_oscPos = pos;
+		// "или" чтобы флаг не снялся пока мы сами его не снимем
+		_oscRollower |= rollower;
+	}
+	
+	static void OscPosUpdated(void *p, unsigned int pos, bool rollower)
+	{
+		OscCacheImplementer *im = (OscCacheImplementer *)p;
+		
+		if (!im)
+		{
+			return;
+		}
+		
+		im->OscPosUpdated(pos, rollower);
+	}
+	
 	void StoreOscPart(unsigned int offset, unsigned char *data, int dataCount)
 	{
 		//return;
-		if (_state != StateFillBuffer)
+		if (_state != StateWaitPart)
 		{
 			return;
 		}
@@ -97,9 +124,15 @@ public:
 		
 		_bufferPos += dataCount;
 		
+		_requestPos = (offset + dataCount) / OscRecordSize;
+		
 		if ((_bufferPos > BufferSize - PortionSize) || (_currentOffset + _bufferPos >= OscFileSize))
 		{
 			_state = StateSaveBuffer;
+		}
+		else
+		{
+			_state = StateFillBuffer;
 		}
 	}
 	
@@ -113,24 +146,6 @@ public:
 		}
 		
 		im->StoreOscPart(offset, data, dataCount);
-	}
-	
-	void SkipOscRead(unsigned int skipCount, bool wrap)
-	{
-		_skipCount = skipCount;
-		_skipWrap = wrap;
-	}
-	
-	static void SkipOscRead(void *callbackParam, unsigned int skipCount, bool wrap)
-	{
-		OscCacheImplementer *im = (OscCacheImplementer *)callbackParam;
-		
-		if (!im)
-		{
-			return;
-		}
-		
-		im->SkipOscRead(skipCount, wrap);
 	}
 	
 	unsigned int GetCurrentFileNumber()
@@ -148,6 +163,11 @@ public:
 		}
 		
 		fileNumber = im->GetCurrentFileNumber();
+	}
+	
+	unsigned int GetRequestPos()
+	{
+		return _requestPos;
 	}
 	
 	bool IsDataLoaded(unsigned int fileNumber, int pos)
@@ -203,18 +223,78 @@ public:
 					_currentOffset = 0;
 					_bufferPos = 0;
 					_loadedPos = 0;
+					_oscRollower = false;
+					_requestPos = 0;
 					_state = StateFillBuffer;
 				}
 			}
 			break;
 		case StateFillBuffer:
 			{
-				if (_skipWrap)
+				bool eventPending = false;
+				AllowOscSkipCallback(eventPending);
+				bool allowSkip = !eventPending;
+				
+				if (_oscRollower)
 				{
-					_skipWrap = false;
-					_bufferPos = 0;
-					_state = StateNextFile;
+					if (_requestPos < 65535)
+					{
+						if (allowSkip)
+						{
+							if (65535 - _requestPos > 5000)
+							{
+								_requestPos += 5000;
+								break;
+							}
+							else
+							{
+								int delta = 65535 - _requestPos + _oscPos;
+								if (delta > 5000)
+								{
+									_state = StateNextFile;
+									break;
+								}
+							}
+						}
+						
+						bool result = false;
+						SendRequestCallback(_requestPos, result);
+						if (result)
+						{
+							_state = StateWaitPart;
+						}
+					}
+					else
+					{
+						_state = StateNextFile;
+					}
 				}
+				else
+				{
+					if (_requestPos < _oscPos)
+					{
+						if (allowSkip)
+						{
+							int delta = _oscPos - _requestPos;
+							if (delta > 5000)
+							{
+								_requestPos += 5000;						
+								break;
+							}
+						}
+						
+						bool result = false;
+						SendRequestCallback(_requestPos, result);
+						if (result)
+						{
+							_state = StateWaitPart;
+						}
+					}
+				}
+			}
+			break;
+		case StateWaitPart:
+			{
 			}
 			break;
 		case StateSaveBuffer:

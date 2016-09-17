@@ -21,12 +21,8 @@ public:
     virtual bool HasProblem() = 0;
 	virtual unsigned short MinRegNumber() = 0;
 	virtual unsigned short MaxRegNumber() = 0;
-	virtual bool OscRequest(unsigned char *dst, unsigned int StartPoint, unsigned int PointsCount) = 0;
-	virtual bool OscRequestWait() = 0;
-	virtual bool OscResponseReady(unsigned int &StartPoint, unsigned int &PointsCount) = 0;
 	virtual bool IsWaitRegistersResponse() = 0;
 	virtual void SetDoOnlyLowerRegsRequest(bool value) = 0;
-	virtual unsigned int GetLoadedOscPos() = 0;
 };
 
 template<class DriveController, bool Primary>
@@ -73,21 +69,6 @@ public:
         return DriveController::HasProblem();
     }
 	
-	virtual bool OscRequest(unsigned char *dst, unsigned int StartPoint, unsigned int PointsCount)
-	{
-		return DriveController::OscRequest(dst, StartPoint, PointsCount);
-	}
-	
-	virtual	bool OscRequestWait()
-	{
-		return DriveController::OscRequestWait();
-	}
-	
-	virtual bool OscResponseReady(unsigned int &StartPoint, unsigned int &PointsCount)
-	{
-		return DriveController::OscResponseReady(StartPoint, PointsCount);
-	}
-	
 	virtual bool IsWaitRegistersResponse()
 	{
 		return DriveController::IsWaitRegistersResponse();
@@ -96,11 +77,6 @@ public:
 	virtual void SetDoOnlyLowerRegsRequest(bool value)
 	{
 		DriveController::DoOnlyLowerRegsRequest = value;
-	}
-	
-	virtual unsigned int GetLoadedOscPos()
-	{
-		return DriveController::GetLoadedOscPos();
 	}
 };
 
@@ -936,14 +912,6 @@ public:
         float res = 0;
         memcpy(&res, &data, 4);
         return res;
-	}
-	
-	static unsigned int GetLoadedOscPos()
-	{
-		if (0 == _activeController)
-			return 0;
-		
-		return _activeController->GetLoadedOscPos();
 	}
 protected:
 	static bool GetFlag(unsigned char reg, unsigned char bit)

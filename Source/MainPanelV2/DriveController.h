@@ -115,12 +115,10 @@ public:
 	typedef Rblib::CallbackWrapper<> ModbusSelectCallbackType;
 	typedef Rblib::CallbackWrapper<bool &> GetActiveStateCallbackType;
 	typedef Rblib::CallbackWrapper<bool &> AllowOscReadCallbackType;
-	typedef Rblib::CallbackWrapper<bool &> AllowOscSkipCallbackType;
 	typedef Rblib::CallbackWrapper<unsigned int, unsigned char *, int> OnOscReadedCallbackType;
-	typedef Rblib::CallbackWrapper<unsigned int, bool> OnOscReadSkipCallbackType;
 	typedef Rblib::CallbackWrapper<OscType, unsigned int> OnOscEventCallbackType;
 	typedef Rblib::CallbackWrapper<unsigned short &> GetOscPointerSyncValueCallbackType;
-	typedef Rblib::CallbackWrapper<unsigned int> SyncOscLoadedPosCallbackType;
+	typedef Rblib::CallbackWrapper<unsigned int, bool> OscPosUpdatedCallbackType;
 protected:
 	enum State
 	{
@@ -164,28 +162,30 @@ protected:
     static bool _readOneShot;   // Перечитать один раз несмотря на чтение осциллограмм
     static unsigned int _problemCount;
     
-	static unsigned int _oscLoadedPos;
+	static unsigned int _oscPos;
 	static int _oscEventPointer[OscTypeCount];
 	
 	static bool _oscRequestWait;
 	static bool _oscResponseReady;
 	static OscRequestInfo _oscRequest;
+	
+	static bool _oscRequestPending;
+	static unsigned int _oscRequestPendingPos;
 public:	
 	static bool DoOnlyLowerRegsRequest;
 	static ModbusSelectCallbackType ModbusSelectCallback;
 	static GetActiveStateCallbackType GetActiveStateCallback;
 	static AllowOscReadCallbackType AllowOscReadCallback;
-	static AllowOscSkipCallbackType AllowOscSkipCallback;
 	static OnOscReadedCallbackType OnOscReadedCallback;
-	static OnOscReadSkipCallbackType OnOscReadSkipCallback;
 	static OnOscEventCallbackType OnOscEventCallback;
 	static GetOscPointerSyncValueCallbackType GetOscPointerSyncValueCallback;
-	static SyncOscLoadedPosCallbackType SyncOscLoadedPosCallback;
+	static OscPosUpdatedCallbackType OscPosUpdatedCallback;
 public:
 	static void Init()
 	{
 		ResetOscEventPointers();
-		_oscLoadedPos = 0;
+		_oscRequestPending = false;
+		_oscRequestPendingPos = 0;
 	}
 	
 	static bool ImActive()
@@ -255,18 +255,18 @@ public:
 		return needReset;
 	}
 	
-	static int GetOscLoadCount()
+	static int GetOscLoadCount(unsigned int pos)
 	{
 		int res = 0;
 		
 		if (HasRegValue(RegOscCurPos))
 		{
 			unsigned int curPos = GetRegValue(RegOscCurPos);
-			res = curPos - _oscLoadedPos;
+			res = curPos - pos;
 			bool lastPart = false;
-			if (curPos < _oscLoadedPos)
+			if (curPos < pos)
 			{
-				res = 0xFFFF - _oscLoadedPos;
+				res = 0xFFFF - pos;
 				lastPart = true;
 			}
 			
@@ -282,11 +282,6 @@ public:
 		}
 		
 		return res;
-	}
-	
-	static unsigned int GetLoadedOscPos()
-	{
-		return _oscLoadedPos;
 	}
 	
 	static bool Run()
@@ -382,62 +377,25 @@ public:
 					if (_oscRequestCountdown < 1 )
 					{
 						// осциллограмму вычитываем только из активного регулятора, а он имеет всегда адрес №1
-						if (ImActive())
+						
+						if (_oscRequestPending)
 						{
-							bool eventPending = false;
-							AllowOscSkipCallback(eventPending);
+							unsigned int pos = _oscRequestPendingPos;
 							
-							if (!eventPending)
+							if (ImActive())
 							{
-								int curPos = GetRegValue(RegOscCurPos);
-								int delta = curPos - _oscLoadedPos;
-								if (delta < 0)
-								{
-									delta = 65535 - _oscLoadedPos + curPos;
-								}
+								int loadCount = GetOscLoadCount(pos);
 								
-								if (delta >= 60000)
+								if (loadCount)
 								{
-									_oscLoadedPos += delta;
-									bool wrap = false;
-									if (_oscLoadedPos > 65555)
-									{
-										_oscLoadedPos = 0;
-										wrap = true;
-									}
+									ModBus::ChangeSpeed(Config::MainComPortClockSourceFrequency, 115200);
+									ModbusSelectCallback();
+									unsigned int requestSize = ModBusMaster::BuildReadOscPoints(_request, _address, pos, loadCount);
+									ModBus::SendRequest(_request, requestSize);
 									
-									OnOscReadSkipCallback(delta * OscRecordSize, wrap);
-								}
-								else
-								{
-									if (delta >= 10000)
-									{
-										_oscLoadedPos += 5000;
-										bool wrap = false;
-										if (_oscLoadedPos > 65555)
-										{
-											_oscLoadedPos = 0;
-											wrap = true;
-										}
-										OnOscReadSkipCallback(5000 * OscRecordSize, wrap);
-									}
-								}
-							}
-								
-							int loadCount = GetOscLoadCount();
-							
-							if (loadCount >= OscRequestMaxPortionSize)
-							{
-								if (allowOscRead)
-								{
-										ModBus::ChangeSpeed(Config::MainComPortClockSourceFrequency, 115200);
-										ModbusSelectCallback();
-										unsigned int requestSize = ModBusMaster::BuildReadOscPoints(_request, _address, _oscLoadedPos, loadCount);
-										ModBus::SendRequest(_request, requestSize);
-										
-										_oscRequestCountdown = 50;
-										_state = StateWait;
-										break;
+									_oscRequestCountdown = 50;
+									_state = StateWait;
+									break;
 								}
 							}
 						}
@@ -540,6 +498,13 @@ public:
 								{
 									SetRegValue(RegOscSync, prevOscPointer);
 								}
+								
+								if (GetRegValue(RegOscSync) > 0)
+								{
+									unsigned int curPos = GetRegValue(RegOscCurPos);
+									OscPosUpdatedCallback(curPos, curPos < _oscPos);
+									_oscPos = curPos;
+								}
 							}
 							else
 							{
@@ -555,19 +520,9 @@ public:
 							
 							if (OscRecordSize * regQuantity == _response[2])
 							{
-								OnOscReadedCallback(_oscLoadedPos * OscRecordSize, &_response[3], OscRecordSize * regQuantity);
-								
-								_oscLoadedPos += regQuantity;
-								
-								if (_oscLoadedPos >= 0xFFFF)
-								{
-									_oscLoadedPos = 0;
-								}
-								
-								if (ImActive())
-								{
-									SyncOscLoadedPosCallback(_oscLoadedPos);
-								}
+								unsigned int pos = _oscRequestPendingPos;
+								_oscRequestPending = false;
+								OnOscReadedCallback(pos * OscRecordSize, &_response[3], OscRecordSize * regQuantity);
 								
 								/*
 								_oscResponseReady = true;
@@ -638,9 +593,7 @@ public:
                     }
                     else
                     {
-                        int loadCount = GetOscLoadCount();
-						
-						if (loadCount > 0 && allowOscRead && ImActive())
+						if (_oscRequestPending && _oscRequestCountdown < 1 && ImActive())
 						{
 							_state = StateRequest;
 						}
@@ -772,52 +725,17 @@ public:
 		val = GetRegValue(RegOscCurPos);
 	}
 	
-	static void SyncOscLoadedPos(unsigned int val)
+	static bool OscRequest(unsigned int pos)
 	{
-		_oscLoadedPos = val;
-	}
-	
-	static bool OscRequest(unsigned char *dst, unsigned int StartPoint, unsigned int PointsCount)
-	{
-		if (_oscRequestWait)
+		if (_oscRequestPending)
 		{
 			return false;
 		}
 		
-		_oscResponseReady = false;
-		_oscRequest.DstBuffer = dst;
-		
-		_oscRequestWait = true;
-		
-		_oscRequest.StartPoint = StartPoint;
-		
-		unsigned int count = PointsCount;
-		// в поле данных влезет не более (250 / OscRecordSize) записей
-		if (count > OscRequestMaxPortionSize)
-		{
-			count = OscRequestMaxPortionSize;
-		}
-		unsigned int end = StartPoint + count;
-		if (end > 0xFFFF)
-		{
-			count = 0xFFFF - StartPoint + 1;
-		}
-		
-		_oscRequest.PointsCount = count;
+		_oscRequestPendingPos = pos;
+		_oscRequestPending = true;
 		
 		return true;
-	}
-	
-	static inline bool OscRequestWait()
-	{
-		return _oscRequestWait;
-	}
-	
-	static bool OscResponseReady(unsigned int &StartPoint, unsigned int &PointsCount)
-	{
-		StartPoint = _oscRequest.StartPoint;
-		PointsCount = _oscRequest.PointsCount;
-		return _oscResponseReady;
 	}
 	
 	static bool IsWaitRegistersResponse()
@@ -833,16 +751,10 @@ template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress
 DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::AllowOscReadCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::AllowOscReadCallback;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
-DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::AllowOscSkipCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::AllowOscSkipCallback;
-
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::GetActiveStateCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::GetActiveStateCallback;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscReadedCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscReadedCallback;
-
-template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
-DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscReadSkipCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscReadSkipCallback;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscEventCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OnOscEventCallback;
@@ -851,7 +763,7 @@ template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress
 DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::GetOscPointerSyncValueCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::GetOscPointerSyncValueCallback;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
-DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::SyncOscLoadedPosCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::SyncOscLoadedPosCallback;
+DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OscPosUpdatedCallbackType DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::OscPosUpdatedCallback;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 typename DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::State
@@ -908,7 +820,7 @@ template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress
 unsigned int DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_problemCount = 0;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
-unsigned int DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_oscLoadedPos = 0;
+unsigned int DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_oscPos = 0;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 int DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_oscEventPointer[];
@@ -921,6 +833,12 @@ bool DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_osc
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 OscRequestInfo DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_oscRequest = OscRequestInfo(0, 0, 0);
+
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+bool DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_oscRequestPending = false;
+
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+unsigned int DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_oscRequestPendingPos = 0;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 bool DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::DoOnlyLowerRegsRequest = false;

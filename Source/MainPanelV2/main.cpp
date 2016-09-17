@@ -51,7 +51,7 @@ void GetDebugOscDisplayData(WindowDebugOsc<Display, display>::DisplayData &data)
 {
 	data.CacheFileNumber = OscCache.GetCurrentFileNumber();
 	data.CurrentOscPos = ActiveDriveControllerParams::GetRegValue(ActiveDriveControllerParams::RegOscCurPos);
-	data.LoadedOscPos = ActiveDriveControllerParams::GetLoadedOscPos();
+	data.LoadedOscPos = OscCache.GetRequestPos();
 }
 
 void UsbRun();
@@ -472,24 +472,20 @@ int main()
 	
 	PrimaryController::ModbusSelectCallback = Drivers::Board::PortScanerConnection::Select<1>;
 	PrimaryController::AllowOscReadCallback.Set(OscCacheType::AllowRead, &OscCache);
-	PrimaryController::AllowOscSkipCallback = OscGet::OscEventPending;
 	PrimaryController::GetActiveStateCallback = ControllerSwitch::IsPrimaryActive;
 	PrimaryController::OnOscReadedCallback.Set(OscCacheType::StoreOscPart, &OscCache);
-	PrimaryController::OnOscReadSkipCallback.Set(OscCacheType::SkipOscRead, &OscCache);
 	PrimaryController::OnOscEventCallback = OnPrimaryOscEvent;
 	PrimaryController::GetOscPointerSyncValueCallback = ReserveController::GetOscPointerSyncValue;
-	PrimaryController::SyncOscLoadedPosCallback = ReserveController::SyncOscLoadedPos;
+	PrimaryController::OscPosUpdatedCallback.Set(OscCacheType::OscPosUpdated, &OscCache);
 	PrimaryController::Init();
 	
 	ReserveController::ModbusSelectCallback = Drivers::Board::PortScanerConnection::Select<2>;
 	ReserveController::AllowOscReadCallback.Set(OscCacheType::AllowRead, &OscCache);
-	ReserveController::AllowOscSkipCallback = OscGet::OscEventPending;
 	ReserveController::GetActiveStateCallback = ControllerSwitch::IsReserveActive;
 	ReserveController::OnOscReadedCallback.Set(OscCacheType::StoreOscPart, &OscCache);
-	ReserveController::OnOscReadSkipCallback.Set(OscCacheType::SkipOscRead, &OscCache);
 	ReserveController::OnOscEventCallback = OnReserveOscEvent;
 	ReserveController::GetOscPointerSyncValueCallback = PrimaryController::GetOscPointerSyncValue;
-	ReserveController::SyncOscLoadedPosCallback = PrimaryController::SyncOscLoadedPos;
+	ReserveController::OscPosUpdatedCallback.Set(OscCacheType::OscPosUpdated, &OscCache);
 	ReserveController::Init();
 	
 	InsulationController::ModbusSelectCallback = Drivers::Board::PortScanerConnection::Select<3>;
@@ -541,6 +537,8 @@ int main()
 	OscCache.CreateFileCallback = OscCacheCreateFile;
 	OscCache.DeleteFileCallback = OscCacheDeleteFile;
 	OscCache.WriteFileCallback = OscCacheWriteFile;
+	OscCache.SendRequestCallback = SendOscReadRequest;
+	OscCache.AllowOscSkipCallback = OscGet::OscEventPending;
 	
 	OscGet::GetOscCacheFileNumber.Set(OscCacheType::GetCurrentFileNumber, &OscCache);
 	OscGet::IsDataLoadedCallback.Set(OscCacheType::IsDataLoaded, &OscCache);

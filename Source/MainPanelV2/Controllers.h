@@ -41,6 +41,11 @@ public:
 	}
 };
 
+void SendOscReadRequest(unsigned int pos, bool &result)
+{
+	result |= PrimaryController::OscRequest(pos);
+	result |= ReserveController::OscRequest(pos);
+}
 
 //typedef PortScanner<Drivers::Board::PortScanerConnection, PrimaryController, ReserveController, MainControllerDiagnostic, ReservControllerDiagnostic, ControllerDiagnosticTemperature> portScanner;
 
