@@ -35,6 +35,7 @@ public:
 	typedef Rblib::CallbackWrapper<unsigned int, unsigned int, unsigned char *, unsigned int, bool &> WriteFileCallbackType;
 	typedef Rblib::CallbackWrapper<unsigned int, bool &> SendRequestCallbackType;
 	typedef Rblib::CallbackWrapper<bool &> AllowOscSkipCallbackType;
+	typedef Rblib::CallbackWrapper<bool &> GetOscPendingCallbackType;
 public:
 	FileSystemReadyCallbackType FileSystemReadyCallback;
 	CreateFileCallbackType CreateFileCallback;
@@ -42,6 +43,7 @@ public:
 	WriteFileCallbackType WriteFileCallback;
 	SendRequestCallbackType SendRequestCallback;
 	AllowOscSkipCallbackType AllowOscSkipCallback;
+	GetOscPendingCallbackType GetOscPendingCallback;
 protected:
 	State _state;
 	unsigned int _fileNumber;
@@ -295,6 +297,13 @@ public:
 			break;
 		case StateWaitPart:
 			{
+				bool pending = false;
+				GetOscPendingCallback(pending);
+				
+				if (!pending)
+				{
+					_state = StateFillBuffer;
+				}
 			}
 			break;
 		case StateSaveBuffer:

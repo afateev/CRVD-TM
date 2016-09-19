@@ -47,6 +47,12 @@ void SendOscReadRequest(unsigned int pos, bool &result)
 	result |= ReserveController::OscRequest(pos);
 }
 
+void GetOscPending(bool &result)
+{
+	result |= PrimaryController::OscRequestPending();
+	result |= ReserveController::OscRequestPending();
+}
+
 //typedef PortScanner<Drivers::Board::PortScanerConnection, PrimaryController, ReserveController, MainControllerDiagnostic, ReservControllerDiagnostic, ControllerDiagnosticTemperature> portScanner;
 
 typedef DriveEventsGenerator<ActiveDriveControllerParams, Events> DriveEvets;

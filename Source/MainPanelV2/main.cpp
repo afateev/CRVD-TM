@@ -52,6 +52,11 @@ void GetDebugOscDisplayData(WindowDebugOsc<Display, display>::DisplayData &data)
 	data.CacheFileNumber = OscCache.GetCurrentFileNumber();
 	data.CurrentOscPos = ActiveDriveControllerParams::GetRegValue(ActiveDriveControllerParams::RegOscCurPos);
 	data.LoadedOscPos = OscCache.GetRequestPos();
+	
+	for (int i = 0; i < WindowDebugOsc<Display, display>::DisplayData::EventCount; i++)
+	{
+		OscGet::GetEventInfo(i, data.EventData[i].File, data.EventData[i].Pointer);
+	}
 }
 
 void UsbRun();
@@ -539,6 +544,7 @@ int main()
 	OscCache.WriteFileCallback = OscCacheWriteFile;
 	OscCache.SendRequestCallback = SendOscReadRequest;
 	OscCache.AllowOscSkipCallback = OscGet::OscEventPending;
+	OscCache.GetOscPendingCallback = GetOscPending;
 	
 	OscGet::GetOscCacheFileNumber.Set(OscCacheType::GetCurrentFileNumber, &OscCache);
 	OscGet::IsDataLoadedCallback.Set(OscCacheType::IsDataLoaded, &OscCache);

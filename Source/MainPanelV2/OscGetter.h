@@ -119,6 +119,12 @@ public:
 		}
 	}
 	
+	static void GetEventInfo(int i, unsigned int &file, int &pointer)
+	{
+		file = _oscEventPending[i].FileNumber;
+		pointer = _oscEventPending[i].Pointer;
+	}
+	
 	static bool Run()
 	{
 		for (int i = 0; i < OscFileFormat::OscTypeCount; i++)

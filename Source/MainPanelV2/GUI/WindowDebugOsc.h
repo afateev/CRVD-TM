@@ -15,16 +15,30 @@ class WindowDebugOsc : public Window<DisplayType, display>
 public:
 	struct DisplayData
 	{
+		static const int EventCount = 5;
+		
+		struct EventDataStruct
+		{
+			unsigned int File;
+			int Pointer;
+		};
 	public:
 		unsigned int CacheFileNumber;
 		unsigned int CurrentOscPos;
 		unsigned int LoadedOscPos;
+		EventDataStruct EventData[EventCount];
 	public:
 		DisplayData()
 		{
 			CacheFileNumber = 0;
 			CurrentOscPos = 0;
 			LoadedOscPos = 0;
+			
+			for (int i = 0; i < EventCount; i++)
+			{
+				EventData[i].File = 0;
+				EventData[i].Pointer = -1;
+			}
 		}
 	};
 	
@@ -54,9 +68,16 @@ public:
 			delta += 65535;
 		}
 		
-		len = sprintf(str, "LoadedOscPos: %d (delta: %d)", displayData.LoadedOscPos, delta);
+		len = sprintf(str, "RequestOscPos: %d (delta: %d)", displayData.LoadedOscPos, delta);
 		display.MoveCursorTo(0, 16 * 3);
 		display.WriteLine(str, len);
+		
+		for (int i = 0; i < DisplayData::EventCount; i++)
+		{
+			len = sprintf(str, "Event %d: file %d, pointer: %d", i + 1, displayData.EventData[i].File, displayData.EventData[i].Pointer);
+			display.MoveCursorTo(0, 16 * 4 + i * 16);
+			display.WriteLine(str, len);
+		}
 	}
 	
 	virtual bool OnKeyDown(char &key)

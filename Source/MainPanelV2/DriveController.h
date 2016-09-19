@@ -171,6 +171,8 @@ protected:
 	
 	static bool _oscRequestPending;
 	static unsigned int _oscRequestPendingPos;
+	
+	static bool _initComplete;
 public:	
 	static bool DoOnlyLowerRegsRequest;
 	static ModbusSelectCallbackType ModbusSelectCallback;
@@ -186,6 +188,7 @@ public:
 		ResetOscEventPointers();
 		_oscRequestPending = false;
 		_oscRequestPendingPos = 0;
+		_initComplete = false;
 	}
 	
 	static bool ImActive()
@@ -398,6 +401,10 @@ public:
 									break;
 								}
 							}
+							else
+							{
+								_oscRequestPending = false;
+							}
 						}
 					}
 				}
@@ -499,7 +506,7 @@ public:
 									SetRegValue(RegOscSync, prevOscPointer);
 								}
 								
-								if (GetRegValue(RegOscSync) > 0)
+								if (GetRegValue(RegOscSync) > 0 && _initComplete  && firstReg == 1)
 								{
 									unsigned int curPos = GetRegValue(RegOscCurPos);
 									OscPosUpdatedCallback(curPos, curPos < _oscPos);
@@ -572,6 +579,10 @@ public:
                                 _regState[i].Edited = false;
                                 break;
                             }
+							else
+							{
+								_regState[i].Edited = false;
+							}
                         }
                     }
                     
@@ -623,6 +634,15 @@ public:
 				if (readed > 0 && 0 != _response)
 				{
 					_state = StateCheckChanges;
+					
+					unsigned int reg = _request[2];
+					reg <<= 8;
+					reg |= _request[3];
+					
+					if (reg == RegOscSync)
+					{
+						_initComplete = true;
+					}
                     /*
                     unsigned int firstReg = _request[2];
 					firstReg <<= 8;
@@ -738,6 +758,11 @@ public:
 		return true;
 	}
 	
+	static bool OscRequestPending()
+	{
+		return _oscRequestPending;
+	}
+	
 	static bool IsWaitRegistersResponse()
 	{
 		return _state == StateWait || _state == StateResponse;
@@ -839,6 +864,9 @@ bool DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_osc
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 unsigned int DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_oscRequestPendingPos = 0;
+
+template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
+bool DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::_initComplete = false;
 
 template<class ModBus, unsigned char MainAddres, unsigned char AdditionalAddress, int oscRecordSize>
 bool DriveController<ModBus, MainAddres, AdditionalAddress, oscRecordSize>::DoOnlyLowerRegsRequest = false;
