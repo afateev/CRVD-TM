@@ -11,6 +11,8 @@ template<class ModBus, unsigned char BusAddres, int FirstReg, int RegCount>
 class ControllerDiagnostic
 {
 public:
+	static const int NoResponseTimeout = 2;
+	
 	typedef Rblib::CallbackWrapper<bool> TxEnableCallbackType;
 	typedef Rblib::CallbackWrapper<> ModbusSelectCallbackType;
 	static TxEnableCallbackType TxEnableCallback;
@@ -30,6 +32,8 @@ protected:
 	static unsigned char *_response;
 	
 	static unsigned int _registers[RegCount];
+	
+	static unsigned int _noResponseTimeoutCounter;
 public:
 	static bool Run()
 	{
@@ -79,6 +83,8 @@ public:
 				_response = ModBus::GetResponse(readed);
 				if (readed > 0 && 0 != _response)
 				{
+					_noResponseTimeoutCounter = 0;
+					
 					unsigned int firstReg = _request[2];
 					firstReg <<= 8;
 					firstReg |= _request[3];
@@ -105,6 +111,13 @@ public:
 						}
 					}
 				}
+				else
+				{
+					if (_noResponseTimeoutCounter < NoResponseTimeout)
+					{
+						_noResponseTimeoutCounter++;
+					}
+				}
 				_state = StateComplete;
 			}
 			break;
@@ -125,6 +138,16 @@ public:
 	static void GetAddress(unsigned char &value)
 	{
 		value = GetAddress();
+	}
+	
+	static bool NoResponse()
+	{
+		return _noResponseTimeoutCounter >= NoResponseTimeout;
+	}
+	
+	static void NoResponse(bool &noResponse)
+	{
+		noResponse = NoResponse();
 	}
 	
 	static unsigned short GetRegValue(unsigned char reg)
@@ -205,5 +228,8 @@ unsigned char *ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::_res
 
 template<class ModBus, unsigned char BusAddres, int FirstReg, int RegCount>
 unsigned int ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::_registers[];
+
+template<class ModBus, unsigned char BusAddres, int FirstReg, int RegCount>
+unsigned int ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::_noResponseTimeoutCounter = ControllerDiagnostic<ModBus, BusAddres, FirstReg, RegCount>::NoResponseTimeout;
 
 #endif

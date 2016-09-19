@@ -11,6 +11,8 @@ template<class ModBus, unsigned char BusAddres, int FirstReg, int RegCount>
 class InsulationControl
 {
 public:
+	static const int NoResponseTimeout = 2;
+	
 	typedef Rblib::CallbackWrapper<> ModbusSelectCallbackType;
 	static ModbusSelectCallbackType ModbusSelectCallback;
 protected:
@@ -28,6 +30,8 @@ protected:
 	static unsigned char *_response;
 	
 	static unsigned int _registers[RegCount];
+	
+	static unsigned int _noResponseTimeoutCounter;
 public:
 	static bool Run()
 	{
@@ -101,6 +105,13 @@ public:
 						}
 					}
 				}
+				else
+				{
+					if (_noResponseTimeoutCounter < NoResponseTimeout)
+					{
+						_noResponseTimeoutCounter++;
+					}
+				}
 				_state = StateComplete;
 			}
 			break;
@@ -121,6 +132,11 @@ public:
 	static void GetAddress(unsigned char &value)
 	{
 		value = GetAddress();
+	}
+	
+	static bool NoResponse()
+	{
+		return _noResponseTimeoutCounter >= NoResponseTimeout;
 	}
 	
 	static unsigned short GetRegValue(unsigned char reg)
@@ -192,6 +208,9 @@ unsigned char *InsulationControl<ModBus, BusAddres, FirstReg, RegCount>::_respon
 
 template<class ModBus, unsigned char BusAddres, int FirstReg, int RegCount>
 unsigned int InsulationControl<ModBus, BusAddres, FirstReg, RegCount>::_registers[];
+
+template<class ModBus, unsigned char BusAddres, int FirstReg, int RegCount>
+unsigned int InsulationControl<ModBus, BusAddres, FirstReg, RegCount>::_noResponseTimeoutCounter = InsulationControl<ModBus, BusAddres, FirstReg, RegCount>::NoResponseTimeout;
 
 template<class ModBus, unsigned char BusAddres>
 class InsulationControl_

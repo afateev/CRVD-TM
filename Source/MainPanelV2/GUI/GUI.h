@@ -181,9 +181,11 @@ void DesctopInit()
 	
 	wndDiagnosticRegulatorMain.SetOnClose(OnWindowClose);
 	wndDiagnosticRegulatorMain.GetRegValueCallback = MainControllerDiagnostic::GetRegValue;
+	wndDiagnosticRegulatorMain.GetTimeoutFlagCallback = MainControllerDiagnostic::NoResponse;
 	
 	wndDiagnosticRegulatorReserv.SetOnClose(OnWindowClose);
 	wndDiagnosticRegulatorReserv.GetRegValueCallback = ReservControllerDiagnostic::GetRegValue;
+	wndDiagnosticRegulatorReserv.GetTimeoutFlagCallback = ReservControllerDiagnostic::NoResponse;
     
 	
 	desctop.RegisterWindow(&wndMain, wndIdMain);

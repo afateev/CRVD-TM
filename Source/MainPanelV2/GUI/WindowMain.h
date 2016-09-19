@@ -46,10 +46,12 @@ public:
 	struct InsulationControllerDataStruct
 	{
 		unsigned int RIz;
+		bool Link;
 	public:
 		InsulationControllerDataStruct()
 		{
 			RIz = 0;
+			Link = false;
 		}
 	};
 	
@@ -109,7 +111,7 @@ public:
 		PrintCosFi(displayData.ActiveDriveController.CosPhi, displayData.ActiveDriveController.FlagEngineOn, displayData.ActiveDriveController.FlagHasProblem);
 		PrintPreact(displayData.ActiveDriveController.Q, displayData.ActiveDriveController.FlagEngineOn, displayData.ActiveDriveController.FlagHasProblem);
 		
-		PrintInsulationResistance(0, 16 + 1 + 32 + 1 + 16 * 6 + 8, displayData.InsulationController.RIz);
+		PrintInsulationResistance(0, 16 + 1 + 32 + 1 + 16 * 6 + 8, displayData.InsulationController.RIz, displayData.InsulationController.Link);
 		
 		PrintMode(20, 16 + 1 + 32 + 1 + 16 * 6 + 8, displayData.ActiveDriveController.CosControl, displayData.ActiveDriveController.FlagRControl);
 		
@@ -230,17 +232,24 @@ public:
 		_cosFi.Draw(str, len);
 	}
 	
-	void PrintInsulationResistance(unsigned int x, unsigned int y, unsigned int r)
+	void PrintInsulationResistance(unsigned int x, unsigned int y, unsigned int r, bool link)
 	{
 		unsigned char len;
-		if (r >= 0xFFFF)
+		if (link)
 		{
-			// Знак бесконечности - символ с кодом 0x01
-			len = sprintf(str, "R              %c", 1);
+			if (r >= 0xFFFF)
+			{
+				// Знак бесконечности - символ с кодом 0x01
+				len = sprintf(str, "R              %c", 1);
+			}
+			else
+			{
+				len = sprintf(str, "R         %5d kОм", r);
+			}
 		}
 		else
 		{
-			len = sprintf(str, "R         %5d kОм", r);
+			len = sprintf(str, "R             ---");
 		}
 		display.MoveCursorTo(x, y);
 		display.WriteLine(str, len);
