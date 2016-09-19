@@ -85,7 +85,7 @@ public:
 class MenuItemList : public MenuItemListBase
 {
 public:
-	static const unsigned char MaxCount = 42;
+	static const unsigned char MaxCount = 43;
 protected:
 	MenuItem *_list[MaxCount];
 	unsigned char _size;

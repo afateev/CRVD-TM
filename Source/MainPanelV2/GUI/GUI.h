@@ -313,8 +313,8 @@ void ControllerParamsMenuEndEditorsInit()
     CONTROLLER_PARAM_INIT(WaitAfterDriveOn);
     CONTROLLER_PARAM_INIT(WaitAfterStatorCurrenLow);
     CONTROLLER_PARAM_INIT(WaitAfterenergizingOn);
-    menuListControllerSetup.Add(&menuControllerSplitterController);
     CONTROLLER_PARAM_INIT(StartForsingTime);
+	menuListControllerSetup.Add(&menuControllerSplitterController);
     CONTROLLER_PARAM_INIT(StatorVoltageMaxDisplay);
     CONTROLLER_PARAM_INIT(StatorCurrentMaxDisplay);
     CONTROLLER_PARAM_INIT(RotorVoltageMaxDisplay);
