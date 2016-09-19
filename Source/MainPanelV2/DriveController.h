@@ -169,8 +169,8 @@ protected:
 	static bool _oscResponseReady;
 	static OscRequestInfo _oscRequest;
 	
-	static bool _oscRequestPending;
-	static unsigned int _oscRequestPendingPos;
+	volatile static bool _oscRequestPending;
+	volatile static unsigned int _oscRequestPendingPos;
 	
 	static bool _initComplete;
 public:	
@@ -528,8 +528,8 @@ public:
 							if (OscRecordSize * regQuantity == _response[2])
 							{
 								unsigned int pos = _oscRequestPendingPos;
-								_oscRequestPending = false;
 								OnOscReadedCallback(pos * OscRecordSize, &_response[3], OscRecordSize * regQuantity);
+								_oscRequestPending = false;
 								
 								/*
 								_oscResponseReady = true;

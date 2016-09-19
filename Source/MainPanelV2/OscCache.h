@@ -17,6 +17,7 @@ public:
 		StateFillBuffer,
 		StateSendSequest,
 		StateWaitPart,
+		StatePartReceived,
 		StateSaveBuffer,
 		StateNextFile
 	};
@@ -45,7 +46,7 @@ public:
 	AllowOscSkipCallbackType AllowOscSkipCallback;
 	GetOscPendingCallbackType GetOscPendingCallback;
 protected:
-	State _state;
+	volatile State _state;
 	unsigned int _fileNumber;
 	unsigned int _currentOffset;
 	unsigned int _bufferPos;
@@ -109,6 +110,8 @@ public:
 		{
 			return;
 		}
+		
+		_state = StatePartReceived;
 		
 		if (_bufferPos == 0)
 		{
@@ -300,7 +303,8 @@ public:
 				bool pending = false;
 				GetOscPendingCallback(pending);
 				
-				if (!pending)
+				// еще раз удостоверимся что мы ждем чтение, а то в другом потоке состояние могло измениться
+				if (!pending && _state == StateWaitPart)
 				{
 					_state = StateFillBuffer;
 				}
