@@ -79,6 +79,8 @@ public:
 				_response = ModBus::GetResponse(readed);
 				if (readed > 0 && 0 != _response)
 				{
+					_noResponseTimeoutCounter = 0;
+					
 					unsigned int firstReg = _request[2];
 					firstReg <<= 8;
 					firstReg |= _request[3];
