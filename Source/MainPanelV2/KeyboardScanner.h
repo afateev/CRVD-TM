@@ -16,12 +16,14 @@ protected:
 	static const unsigned char _rows[4];
 	static const unsigned char _cols[4];
 	static bool _prevState[4][4];
+	static int _stateCount[4][4];
 	static const char _keyCodes[4][4];
 	typedef void (CallbackType)(char key);
 	static CallbackType *_onKeyDown;
 	static CallbackType *_onKeyUp;
 	static unsigned int _repeateCount;
 	static const unsigned int RepeatTimeout = 50;
+	static const unsigned int StateChangedCountThreshold = 5;
 public:
 	
 	static inline void Init()
@@ -44,19 +46,29 @@ public:
 		
 		if (_prevState[_row][_col] != curState)
 		{
-			if (curState)
+			if (_stateCount[_row][_col] < StateChangedCountThreshold)
 			{
-				OnKeyUp(_row, _col);
+				_stateCount[_row][_col]++;
 			}
 			else
 			{
-				OnKeyDown(_row, _col);
+				if (curState)
+				{
+					OnKeyUp(_row, _col);
+				}
+				else
+				{
+					OnKeyDown(_row, _col);
+				}
+				_repeateCount = 0;
+				pause = 0;
+				_prevState[_row][_col] = curState;
 			}
-			_repeateCount = 0;
-			pause = 0;
 		}
 		else
 		{
+			_stateCount[_row][_col] = 0;
+			
 			if (!curState)
 			{
 				if (_repeateCount < RepeatTimeout)
@@ -73,7 +85,6 @@ public:
 				}
 			}
 		}
-		_prevState[_row][_col] = curState;
 		
 		Port::SetMode(_rows[_row], Port::ModeInput);
 		Port::SetPullUpPullDownMode(_rows[_row], Port::PullUpPullDownModeNone);
@@ -135,6 +146,9 @@ const unsigned char KeyboardScanner<Port, Pin1, Pin2, Pin3, Pin4, PinA, PinB, Pi
 
 template <class Port, unsigned char Pin1, unsigned char Pin2, unsigned char Pin3, unsigned char Pin4, unsigned char PinA, unsigned char PinB, unsigned char PinC, unsigned char PinD>
 bool KeyboardScanner<Port, Pin1, Pin2, Pin3, Pin4, PinA, PinB, PinC, PinD>::_prevState[4][4] = {{1,1,1,1},{1,1,1,1},{1,1,1,1},{1,1,1,1}};
+
+template <class Port, unsigned char Pin1, unsigned char Pin2, unsigned char Pin3, unsigned char Pin4, unsigned char PinA, unsigned char PinB, unsigned char PinC, unsigned char PinD>
+int KeyboardScanner<Port, Pin1, Pin2, Pin3, Pin4, PinA, PinB, PinC, PinD>::_stateCount[4][4] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0}};
 
 template <class Port, unsigned char Pin1, unsigned char Pin2, unsigned char Pin3, unsigned char Pin4, unsigned char PinA, unsigned char PinB, unsigned char PinC, unsigned char PinD>
 const char KeyboardScanner<Port, Pin1, Pin2, Pin3, Pin4, PinA, PinB, PinC, PinD>::_keyCodes[4][4] = {{'1','+','2','3'},{'4','-','5','6'},{'7','F','8','9'},{'E','S','0',13}};
