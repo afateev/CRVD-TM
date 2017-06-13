@@ -199,7 +199,7 @@ protected:
 	static const unsigned char StateReg = 0x06;
 	static const unsigned char StopReg = 0x08;
 	
-	static unsigned long _currentRun;			// сколько прошло с момента текущего запуска
+	__no_init static unsigned long _currentRun;			// сколько прошло с момента текущего запуска
 	static unsigned long _lastRun;              // премя предыдущего запуска
     static unsigned long _workTimeAllreadySaved;// то что уже сохранено после текущего запуска
 	static unsigned long _workTimeTotal;		// то что накоплено в файле всего
@@ -775,8 +775,8 @@ public:
 			if (_currentRun > 0)
             {
                 unsigned long notSaved = _currentRun - _workTimeAllreadySaved;
-                // если натикало с момента последнего сохранения больше чем час, то пора сохранить
-                if (notSaved >= 3600)
+                // если натикало с момента последнего сохранения больше чем минуту, то пора сохранить
+                if (notSaved >= 60)
                     needWrite = true;
                 if (!GetFlagEngineOn() && notSaved > 0)
                 {
@@ -887,6 +887,11 @@ public:
         return _lastRun;
 	}
 	
+	static void ResetUpTime()
+	{
+		_currentRun = 0;
+	}
+	
 	static long GetOperatingTime()
 	{
 		return _workTimeTotal - _workTimeAllreadySaved + _currentRun;
@@ -970,7 +975,7 @@ template<class ControllerInterfaceType, class Config>
 float DriveControllerParams<ControllerInterfaceType, Config>::Pi = 3.1415926535897932384626433832795;
 
 template<class ControllerInterfaceType, class Config>
-unsigned long DriveControllerParams<ControllerInterfaceType, Config>::_currentRun = 0;
+unsigned long DriveControllerParams<ControllerInterfaceType, Config>::_currentRun;
 
 template<class ControllerInterfaceType, class Config>
 unsigned long DriveControllerParams<ControllerInterfaceType, Config>::_lastRun = 0;

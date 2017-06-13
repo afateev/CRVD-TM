@@ -506,8 +506,12 @@ public:
 									SetRegValue(RegOscSync, prevOscPointer);
 								}
 								
-								if (GetRegValue(RegOscSync) > 0 && _initComplete  && firstReg == 1)
+								if (GetRegValue(RegOscSync) > 0 && _initComplete  && firstReg == 1/* && !_regState[RegOscSync].Edited*/)
 								{
+									if (_regState[RegOscSync].Edited)
+									{
+										__no_operation();
+									}
 									unsigned int curPos = GetRegValue(RegOscCurPos);
 									OscPosUpdatedCallback(curPos, curPos < _oscPos);
 									_oscPos = curPos;
@@ -515,6 +519,8 @@ public:
 							}
 							else
 							{
+								_oscPos = 0;
+								
 								unsigned short oscPointerSyncValue = 0;
 								GetOscPointerSyncValueCallback(oscPointerSyncValue);
 								SetRegValue(RegOscSync, oscPointerSyncValue);

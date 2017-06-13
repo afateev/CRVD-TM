@@ -445,6 +445,34 @@ void OnOscFileAdded()
 	wndOscList.OnFileAdded();
 }
 
+void CheckTimeAndReset()
+{
+	time_t dt = Rblib::Rtc::GetTime();
+	struct tm * timeinfo = localtime ( &dt );
+	
+	static int firstCheck = true;
+	static int prevH = 0;
+	static int prevM = 0;
+	
+	int curH = timeinfo->tm_hour;
+	int curM = timeinfo->tm_min;
+	
+	if (firstCheck)
+	{
+		firstCheck = false;
+	}
+	else
+	{
+		if (prevH == 23 && prevM == 59 && curH == 0 && curM == 0)
+		{
+			NVIC_SystemReset();
+		}
+	}
+	
+	prevH = curH;
+	prevM = curM;
+}
+
 int main()
 {
 #ifdef USB_STORAGE
@@ -553,12 +581,30 @@ int main()
 	OscGet::OnOscFileAddedCallback = OnOscFileAdded;
 	OscGet::Init(OscFilesRead, OscFilesWrite);
 	
-	// начали работу
-	Event e(Rblib::Rtc::GetTime(), EventProgramStart);
-	Events::Push(e);
+	// если не было программного сброса, то
+	bool softReset = false;
 	
+	if(__HAL_RCC_GET_FLAG(RCC_FLAG_SFTRST) == SET)
+	{
+		softReset = true;
+	}
+	else
+	{
+		ActiveDriveControllerParams::ResetUpTime();
+		
+		// добавляем событие
+		// начали работу
+		Event e(Rblib::Rtc::GetTime(), EventProgramStart);
+		Events::Push(e);
+	}
+	
+	// чистим флаги
+	__HAL_RCC_CLEAR_RESET_FLAGS();
+		
 	while(1)
 	{
+		CheckTimeAndReset();
+		
 		if (ControllerSwitch::IsPrimaryActive())
 		{
 			ActiveDriveControllerParams::SetActiveController(&PrimaryControllerInterface);
@@ -577,7 +623,7 @@ int main()
 			ReserveControllerInterface.SetDoOnlyLowerRegsRequest(false);
 		}
 		
-		DriveEvets::Run();
+		DriveEvets::Run(softReset);
 		Events::Run();
 		wndEvents.DoLoPiorityWork();
 		ActiveDriveControllerParams::Run();
@@ -703,5 +749,7 @@ int main()
 				break;
 			}
 		}*/
+		
+		softReset = false;
 	}
 }

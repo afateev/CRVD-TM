@@ -111,8 +111,12 @@ protected:
 	
 	static ActiveController _prevActiveController;
 public:
-	static void Run()
+	static void Run(bool noEvents)
 	{
+		static bool noEventsStored = false;
+		
+		noEventsStored |= noEvents;
+		
 		time_t curTime = Rblib::Rtc::GetTime();
 		
 		// нет данных, нечего делать
@@ -129,14 +133,20 @@ public:
 			{
 			case ACPrimary:
 				{
-					Event e(curTime, EventRunMain);
-					Events::Push(e);
+					if (!noEventsStored)
+					{
+						Event e(curTime, EventRunMain);
+						Events::Push(e);
+					}
 				}
 				break;
 			case ACReserve:
 				{
-					Event e(curTime, EventRunReserve);
-					Events::Push(e);
+					if (!noEventsStored)
+					{
+						Event e(curTime, EventRunReserve);
+						Events::Push(e);
+					}
 				}
 				break;
 			}
@@ -255,7 +265,10 @@ public:
 			if (valid)
 			{
 				e.SetDt(curTime);
-				Events::Push(e);
+				if (!noEventsStored)
+				{
+					Events::Push(e);
+				}
 			}
 		}
 		
@@ -393,7 +406,10 @@ public:
 				{
 					e.SetDt(curTime);
 				}
-				Events::Push(e);
+				if (!noEventsStored)
+				{
+					Events::Push(e);
+				}
 			}
 		}
 		
@@ -401,6 +417,7 @@ public:
 		_prevProtectionState = curProtectionState;
 		_prevActiveController = curActiveController;
 		_stateUndefined = false;
+		noEventsStored = false;
 	}
 };
 template<class ActiveDriveControllerParams, class Events>
