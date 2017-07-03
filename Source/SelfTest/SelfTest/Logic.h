@@ -16,7 +16,8 @@ template
 		class SignalDO_IPCtrl_G,
 		class SignalD_SA,
 		class SignalD_SB,
-		class SignalD_SC
+		class SignalD_SC,
+		class SignalDO_YPrt
 	>
 class Logic
 {
@@ -45,6 +46,16 @@ public:
 	bool SyncError;
 	bool PhError;
 	
+	bool PmError;
+	unsigned int PmErrorCnt;
+	
+	unsigned int DegPhAB;
+	bool DegPhABError;
+	unsigned int DegPhBC;
+	bool DegPhBCError;
+	unsigned int DegPhCA;
+	bool DegPhCAError;
+	
 	float PMFreq;
 public:
 	Logic()
@@ -55,6 +66,9 @@ public:
 	void Init()
 	{
 		Reset();
+		SignalD_SA::OnFront.Set(OnFrontA, this);
+		SignalD_SB::OnFront.Set(OnFrontB, this);
+		SignalD_SC::OnFront.Set(OnFrontC, this);
 	}
 	
 	void Reset()
@@ -82,7 +96,17 @@ public:
 		SyncError = false;
 		PhError = false;
 		
+		PmError = false;
+		PmErrorCnt = 0;
+		
 		PMFreq = 0;
+		
+		DegPhAB = 0;
+		DegPhBC = 0;
+		DegPhCA = 0;
+		DegPhABError = false;
+		DegPhBCError = false;
+		DegPhCAError = false;
 	}
 	
 	void Update()
@@ -90,12 +114,12 @@ public:
 		const float errorThreshld = 0.1;
 		
 		Pos5VC1 = SignalPos5VC1::Get();
-		Pos5VC1 *= 2.0;
+		Pos5VC1 *= 1.945;
 		
 		Pos5VC1Error = (Pos5VC1 < 5.0 - 5.0 * errorThreshld) || (Pos5VC1 > 5.0 + 5.0 * errorThreshld);
 		
 		Pos3V3 = SignalPos3V3::Get();
-		Pos3V3 *= 1.28;
+		Pos3V3 *= 1.308;
 		
 		Pos3V3Error = (Pos3V3 < 3.3 - 3.3 * errorThreshld) || (Pos3V3 > 3.3 + 3.3 * errorThreshld);
 		
@@ -105,7 +129,7 @@ public:
 		Pos5VA1Error = (Pos5VA1 < 5.0 - 5.0 * errorThreshld) || (Pos5VA1 > 5.0 + 5.0 * errorThreshld);
 		
 		Neg5VA1 = SignalNeg5VA1::Get();
-		Neg5VA1 *= 4.9;
+		Neg5VA1 *= 4.84;
 		Neg5VA1 += -17.55;
 		
 		Neg5VA1Error = (-Neg5VA1 < 5.0 - 5.0 * errorThreshld) || (-Neg5VA1 > 5.0 + 5.0 * errorThreshld);
@@ -116,7 +140,7 @@ public:
 		Pos5VA2Error = (Pos5VA2 < 5.0 - 5.0 * errorThreshld) || (Pos5VA2 > 5.0 + 5.0 * errorThreshld);
 		
 		Neg5VA2 = SignalNeg5VA2::Get();
-		Neg5VA2 *= 4.9;
+		Neg5VA2 *= 4.84;
 		Neg5VA2 += -17.55;
 		
 		Neg5VA2Error = (-Neg5VA2 < 5.0 - 5.0 * errorThreshld) || (-Neg5VA2 > 5.0 + 5.0 * errorThreshld);
@@ -147,7 +171,27 @@ public:
 			
 			SyncError = SAError || SBError || SCError;
 			
+			PhError = DegPhABError || DegPhBCError || DegPhCAError;
+			
 			PMFreq = SignalD_SA::GetFrequency();
+			
+			unsigned int pmErrorDetecFreq = SignalD_50HzImp::GetFrequency();
+			if (pmErrorDetecFreq > 45 && pmErrorDetecFreq < 55)
+			{
+				if (PmErrorCnt < 10)
+				{
+					PmErrorCnt++;
+				}
+				else
+				{
+					PmError = true;
+				}
+			}
+			else
+			{
+				PmErrorCnt = 0;
+				PmError = false;
+			}
 		}
 		else
 		{
@@ -157,9 +201,79 @@ public:
 			SAError = false;
 			SBError = false;
 			SCError = false;
+			DegPhABError = false;
+			DegPhBCError = false;
+			DegPhCAError = false;
+			PhError = false;
 			SyncError = false;
 			PMFreq = 0;
+			PmErrorCnt = 0;
+			PmError = false;
 		}
+	}
+	
+	
+	static void OnFrontA(void *calbackParam)
+	{
+		Logic *im = (Logic *)calbackParam;
+		if (!im)
+		{
+			return;
+		}
+		
+		if (!im->DRdy)
+		{
+			im->DegPhCA = 0;
+			return;
+		}
+		
+		unsigned int ph = SignalD_SC::Get();
+		ph *= 360;
+		ph /= SignalD_SC::NormalTickCount;
+		im->DegPhCA = ph;
+		im->DegPhCAError = (ph < 120 - 120 * 0.1) || (ph > 120 + 120 * 0.1);
+	}
+	
+	static void OnFrontB(void *calbackParam)
+	{
+		Logic *im = (Logic *)calbackParam;
+		if (!im)
+		{
+			return;
+		}
+		
+		if (!im->DRdy)
+		{
+			im->DegPhAB = 0;
+			return;
+		}
+		
+		unsigned int ph = SignalD_SA::Get();
+		ph *= 360;
+		ph /= SignalD_SA::NormalTickCount;
+		im->DegPhAB = ph;
+		im->DegPhABError = (ph < 120 - 120 * 0.1) || (ph > 120 + 120 * 0.1);
+	}
+	
+	static void OnFrontC(void *calbackParam)
+	{
+		Logic *im = (Logic *)calbackParam;
+		if (!im)
+		{
+			return;
+		}
+		
+		if (!im->DRdy)
+		{
+			im->DegPhBC = 0;
+			return;
+		}
+		
+		unsigned int ph = SignalD_SB::Get();
+		ph *= 360;
+		ph /= SignalD_SB::NormalTickCount;
+		im->DegPhBC = ph;
+		im->DegPhBCError = (ph < 120 - 120 * 0.1) || (ph > 120 + 120 * 0.1);
 	}
 };
 

@@ -39,6 +39,11 @@ public:
 	{
 		On(_active);
 	}
+	
+	static bool Get()
+	{
+		return _active;
+	}
 protected:
 	static void On(bool on)
 	{

@@ -23,84 +23,84 @@ namespace ATmega164PA
 		typedef CallbackWrapper<> CallbackType;
 		
 		// обработчики
-		static CallbackType HandlerINT0;
-		static CallbackType HandlerINT1;
-		static CallbackType HandlerINT2;
-		static CallbackType HandlerPCINT0;
-		static CallbackType HandlerPCINT1;
-		static CallbackType HandlerPCINT2;
-		static CallbackType HandlerPCINT3;
-		static CallbackType HandlerWDT;
+		//static CallbackType HandlerINT0;
+		//static CallbackType HandlerINT1;
+		//static CallbackType HandlerINT2;
+		//static CallbackType HandlerPCINT0;
+		//static CallbackType HandlerPCINT1;
+		//static CallbackType HandlerPCINT2;
+		//static CallbackType HandlerPCINT3;
+		//static CallbackType HandlerWDT;
 		static CallbackType HandlerTIMER2_COMPA;
 		static CallbackType HandlerTIMER2_COMPB;
 		static CallbackType HandlerTIMER2_OVF;
-		static CallbackType HandlerTIMER1_CAPT;
+		//static CallbackType HandlerTIMER1_CAPT;
 		static CallbackType HandlerTIMER1_COMPA;
 		static CallbackType HandlerTIMER1_COMPB;
 		static CallbackType HandlerTIMER1_OVF;
 		static CallbackType HandlerTIMER0_COMPA;
 		static CallbackType HandlerTIMER0_COMPB;
 		static CallbackType HandlerTIMER0_OVF;
-		static CallbackType HandlerSPI_STC;
-		static CallbackType HandlerUSART0_RX;
-		static CallbackType HandlerUSART0_UDRE;
-		static CallbackType HandlerUSART0_TX;
-		static CallbackType HandlerANALOG_COMP;
-		static CallbackType HandlerADC;
-		static CallbackType HandlerEE_READY;
-		static CallbackType HandlerTWI;
-		static CallbackType HandlerSPM_READY;
+		//static CallbackType HandlerSPI_STC;
+		//static CallbackType HandlerUSART0_RX;
+		//static CallbackType HandlerUSART0_UDRE;
+		//static CallbackType HandlerUSART0_TX;
+		//static CallbackType HandlerANALOG_COMP;
+		//static CallbackType HandlerADC;
+		//static CallbackType HandlerEE_READY;
+		//static CallbackType HandlerTWI;
+		//static CallbackType HandlerSPM_READY;
 		static CallbackType HandlerUSART1_RX;
-		static CallbackType HandlerUSART1_UDRE;
-		static CallbackType HandlerUSART1_TX;
+		//static CallbackType HandlerUSART1_UDRE;
+		//static CallbackType HandlerUSART1_TX;
 	public:
 #ifdef __ICCAVR__
 		#pragma vector = 0x04
 		__interrupt static void INT0()
 		{
-			HandlerINT0.Call();
+			//HandlerINT0.Call();
 		}
 		
 		#pragma vector = 0x08
 		__interrupt static void INT1()
 		{
-			HandlerINT1.Call();
+			//HandlerINT1.Call();
 		}
 		
 		#pragma vector = 0x0C
 		__interrupt static void INT2()
 		{
-			HandlerINT2.Call();
+			//HandlerINT2.Call();
 		}
 		
 		#pragma vector = 0x10
 		__interrupt static void PCINT0()
 		{
-			HandlerPCINT0.Call();
+			//HandlerPCINT0.Call();
 		}
 		
 		#pragma vector = 0x14
 		__interrupt static void PCINT1()
 		{
-			HandlerPCINT1.Call();
+			//HandlerPCINT1.Call();
 		}
 		
 		#pragma vector = 0x18
 		__interrupt static void PCINT2()
 		{
-			HandlerPCINT2.Call();
+			//HandlerPCINT2.Call();
 		}
 		
 		#pragma vector = 0x1C
 		__interrupt static void PCINT3()
 		{
-			HandlerPCINT3.Call();
+			//HandlerPCINT3.Call();
 		}
 		
 		#pragma vector = 0x20
 		__interrupt static void WDT()
 		{
-			HandlerWDT.Call();
+			//HandlerWDT.Call();
 		}
 		
 		#pragma vector = 0x24
@@ -124,7 +124,7 @@ namespace ATmega164PA
 		#pragma vector = 0x30
 		__interrupt static void TIMER1_CAPT()
 		{
-			HandlerTIMER1_CAPT.Call();
+			//HandlerTIMER1_CAPT.Call();
 		}
 		
 		#pragma vector = 0x34
@@ -166,57 +166,57 @@ namespace ATmega164PA
 		#pragma vector = 0x4C
 		__interrupt static void SPI_STC()
 		{
-			HandlerSPI_STC.Call();
+			//HandlerSPI_STC.Call();
 		}
 		
 		#pragma vector = 0x50
 		__interrupt static void USART0_RX()
 		{
-			HandlerUSART0_RX.Call();
+			//HandlerUSART0_RX.Call();
 		}
 		
 		#pragma vector = 0x54
 		__interrupt static void USART0_UDRE()
 		{
 			Usart::Usart0::OnDataRegisterEmptyInterrupt();
-			HandlerUSART0_UDRE.Call();
+			//HandlerUSART0_UDRE.Call();
 		}
 		
 		#pragma vector = 0x58
 		__interrupt static void USART0_TX()
 		{
 			Usart::Usart0::OnTxCompleteInterrupt();
-			HandlerUSART0_TX.Call();
+			//HandlerUSART0_TX.Call();
 		}
 		
 		#pragma vector = 0x5C
 		__interrupt static void ANALOG_COMP()
 		{
-			HandlerANALOG_COMP.Call();
+			//HandlerANALOG_COMP.Call();
 		}
 		
 		#pragma vector = 0x60
 		__interrupt static void ADC()
 		{
-			HandlerADC.Call();
+			//HandlerADC.Call();
 		}
 		
 		#pragma vector = 0x64
 		__interrupt static void EE_READY()
 		{
-			HandlerEE_READY.Call();
+			//HandlerEE_READY.Call();
 		}
 		
 		#pragma vector = 0x68
 		__interrupt static void TWI()
 		{
-			HandlerTWI.Call();
+			//HandlerTWI.Call();
 		}
 		
 		#pragma vector = 0x6C
 		__interrupt static void SPM_READY()
 		{
-			HandlerSPM_READY.Call();
+			//HandlerSPM_READY.Call();
 		}
 		
 		#pragma vector = 0x70
@@ -229,14 +229,14 @@ namespace ATmega164PA
 		__interrupt static void USART1_UDRE()
 		{
 			Usart::Usart1::OnDataRegisterEmptyInterrupt();
-			HandlerUSART1_UDRE.Call();
+			//HandlerUSART1_UDRE.Call();
 		}
 		
 		#pragma vector = 0x78
 		__interrupt static void USART1_TX()
 		{
 			Usart::Usart1::OnTxCompleteInterrupt();
-			HandlerUSART1_TX.Call();
+			//HandlerUSART1_TX.Call();
 		}
 		
 		static inline void GlobalInterruptEnable(void)
@@ -251,36 +251,36 @@ namespace ATmega164PA
 #endif //__ICCAVR__
 	};
 	
-	InterruptMap::CallbackType InterruptMap::HandlerINT0;
-	InterruptMap::CallbackType InterruptMap::HandlerINT1;
-	InterruptMap::CallbackType InterruptMap::HandlerINT2;
-	InterruptMap::CallbackType InterruptMap::HandlerPCINT0;
-	InterruptMap::CallbackType InterruptMap::HandlerPCINT1;
-	InterruptMap::CallbackType InterruptMap::HandlerPCINT2;
-	InterruptMap::CallbackType InterruptMap::HandlerPCINT3;
-	InterruptMap::CallbackType InterruptMap::HandlerWDT;
+	//InterruptMap::CallbackType InterruptMap::HandlerINT0;
+	//InterruptMap::CallbackType InterruptMap::HandlerINT1;
+	//InterruptMap::CallbackType InterruptMap::HandlerINT2;
+	//InterruptMap::CallbackType InterruptMap::HandlerPCINT0;
+	//InterruptMap::CallbackType InterruptMap::HandlerPCINT1;
+	//InterruptMap::CallbackType InterruptMap::HandlerPCINT2;
+	//InterruptMap::CallbackType InterruptMap::HandlerPCINT3;
+	//InterruptMap::CallbackType InterruptMap::HandlerWDT;
 	InterruptMap::CallbackType InterruptMap::HandlerTIMER2_COMPA;
 	InterruptMap::CallbackType InterruptMap::HandlerTIMER2_COMPB;
 	InterruptMap::CallbackType InterruptMap::HandlerTIMER2_OVF;
-	InterruptMap::CallbackType InterruptMap::HandlerTIMER1_CAPT;
+	//InterruptMap::CallbackType InterruptMap::HandlerTIMER1_CAPT;
 	InterruptMap::CallbackType InterruptMap::HandlerTIMER1_COMPA;
 	InterruptMap::CallbackType InterruptMap::HandlerTIMER1_COMPB;
 	InterruptMap::CallbackType InterruptMap::HandlerTIMER1_OVF;
 	InterruptMap::CallbackType InterruptMap::HandlerTIMER0_COMPA;
 	InterruptMap::CallbackType InterruptMap::HandlerTIMER0_COMPB;
 	InterruptMap::CallbackType InterruptMap::HandlerTIMER0_OVF;
-	InterruptMap::CallbackType InterruptMap::HandlerSPI_STC;
-	InterruptMap::CallbackType InterruptMap::HandlerUSART0_RX;
-	InterruptMap::CallbackType InterruptMap::HandlerUSART0_UDRE;
-	InterruptMap::CallbackType InterruptMap::HandlerUSART0_TX;
-	InterruptMap::CallbackType InterruptMap::HandlerANALOG_COMP;
-	InterruptMap::CallbackType InterruptMap::HandlerADC;
-	InterruptMap::CallbackType InterruptMap::HandlerEE_READY;
-	InterruptMap::CallbackType InterruptMap::HandlerTWI;
-	InterruptMap::CallbackType InterruptMap::HandlerSPM_READY;
+	//InterruptMap::CallbackType InterruptMap::HandlerSPI_STC;
+	//InterruptMap::CallbackType InterruptMap::HandlerUSART0_RX;
+	//InterruptMap::CallbackType InterruptMap::HandlerUSART0_UDRE;
+	//InterruptMap::CallbackType InterruptMap::HandlerUSART0_TX;
+	//InterruptMap::CallbackType InterruptMap::HandlerANALOG_COMP;
+	//InterruptMap::CallbackType InterruptMap::HandlerADC;
+	//InterruptMap::CallbackType InterruptMap::HandlerEE_READY;
+	//InterruptMap::CallbackType InterruptMap::HandlerTWI;
+	//InterruptMap::CallbackType InterruptMap::HandlerSPM_READY;
 	InterruptMap::CallbackType InterruptMap::HandlerUSART1_RX;
-	InterruptMap::CallbackType InterruptMap::HandlerUSART1_UDRE;
-	InterruptMap::CallbackType InterruptMap::HandlerUSART1_TX;
+	//InterruptMap::CallbackType InterruptMap::HandlerUSART1_UDRE;
+	//InterruptMap::CallbackType InterruptMap::HandlerUSART1_TX;
 #else
 	class InterruptMap
 	{

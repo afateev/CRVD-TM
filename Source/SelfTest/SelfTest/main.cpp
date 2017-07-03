@@ -18,6 +18,10 @@ template
 	>
 class SignalPulseDetector
 {
+public:
+	typedef Lib::CallbackWrapper<> CallbackType;
+	static CallbackType OnFront;
+	static const int NormalTickCount = 200;
 protected:
 	static bool _state;
 	static unsigned int _counter;
@@ -40,9 +44,8 @@ public:
 	static void OnTick()
 	{
 		bool newState = Signal::Get();
-		
 		// спад
-		if (_state && !newState)
+		if ((_state != newState) && (newState == 0))
 		{
 			if (_counter > 0)
 			{
@@ -53,6 +56,7 @@ public:
 				_frequency = 10000;
 			}
 			_counter = 0;
+			OnFront.Call();
 		}
 		else
 		{
@@ -94,6 +98,9 @@ unsigned int SignalPulseDetector<Signal>::_counter = 0;
 template <class Signal>
 float SignalPulseDetector<Signal>::_frequency = 0;
 
+template <class Signal>
+SignalPulseDetector<Signal>::CallbackType SignalPulseDetector<Signal>::OnFront;
+
 static const float AREF = 4.5;
 typedef SignalAnalogInput<Adc, Adc::AnalogChannel, Adc::AnalogChannel0, 0x3FF> SignalPos5VC1;
 typedef SignalAnalogInput<Adc, Adc::AnalogChannel, Adc::AnalogChannel1, 0x3FF> SignalPos3V3;
@@ -110,10 +117,10 @@ typedef SignalDiscreteInput<Lib::Gpio::B, 2, true> SignalD_SC;
 typedef SignalPulseDetector<SignalD_SC> SignalSCPulseDetector;
 typedef SignalDiscreteInput<Lib::Gpio::B, 3, true> SignalD_50HzImp;
 typedef SignalPulseDetector<SignalD_50HzImp> Signal50HzPulseDetector;
-typedef SignalDiscreteInput<Lib::Gpio::B, 4, true> SignalD_MainReg;
+typedef SignalDiscreteInput<Lib::Gpio::B, 4, false> SignalD_MainReg;
 typedef SignalDiscreteInput<Lib::Gpio::D, 5, true> SignalD_Rdy;
-typedef SignalDiscreteOutput<Lib::Gpio::C, 0, true> SignalDO_IPCtrl_R;
-typedef SignalDiscreteOutput<Lib::Gpio::C, 1, true> SignalDO_IPCtrl_G;
+typedef SignalDiscreteOutput<Lib::Gpio::C, 0, false> SignalDO_IPCtrl_R;
+typedef SignalDiscreteOutput<Lib::Gpio::C, 1, false> SignalDO_IPCtrl_G;
 typedef SignalDiscreteOutput<Lib::Gpio::C, 2, true> SignalDO_RPrt;
 typedef SignalDiscreteOutput<Lib::Gpio::C, 3, true> SignalDO_YPrt;
 
@@ -122,13 +129,14 @@ typedef Logic<SignalPos5VC1,
 		SignalPos5VA1, SignalNeg5VA1,
 		SignalPos5VA2, SignalNeg5VA2,
 		SignalPos5VC2,
-		SignalD_50HzImp,
+		Signal50HzPulseDetector,
 		SignalD_Rdy,
 		SignalDO_IPCtrl_R,
 		SignalDO_IPCtrl_G,
 		SignalSAPulseDetector,
 		SignalSBPulseDetector,
-		SignalSCPulseDetector
+		SignalSCPulseDetector,
+		SignalDO_YPrt
 		> LogicType;
 
 LogicType logic;
@@ -348,6 +356,20 @@ struct ModbusRegSyncMngStruct
 	unsigned short					: 10;
 };
 
+struct ModbusRegPmMngStruct
+{
+	unsigned short PmError			: 1;
+	unsigned short					: 15;
+};
+
+struct ModbusRegCtrlStruct
+{
+	unsigned short YPrt				: 1;
+	unsigned short RPrt				: 1;
+	unsigned short					: 14;
+};
+
+
 unsigned short GetRegValue(unsigned short reg)
 {
 	switch((MudbusReg)reg)
@@ -359,11 +381,14 @@ unsigned short GetRegValue(unsigned short reg)
 	case ModbusRegMBAddrRes:
 		{
 			return EepVariables::GetReservModbusAddress();
-		}/*
+		}
 	case ModbusRegCtrl:
 		{
-			return SignalSAPulseDetector::GetFrequency();
-		}*/
+			ModbusRegCtrlStruct reg;
+			reg.YPrt = SignalDO_YPrt::Get();
+			reg.RPrt = SignalDO_RPrt::Get();
+			return *((unsigned short *)&reg);
+		}
 	case ModbusRegPwrMng:
 		{
 			ModbusRegPwrMngStruct reg;
@@ -385,6 +410,12 @@ unsigned short GetRegValue(unsigned short reg)
 			reg.SBError = logic.SBError;
 			reg.SCError = logic.SCError;
 			reg.DRdy = logic.DRdy;
+			return *((unsigned short *)&reg);
+		}
+	case ModbusRegPMMng:
+		{
+			ModbusRegPmMngStruct reg;
+			reg.PmError = logic.PmError;
 			return *((unsigned short *)&reg);
 		}
 	case ModbusRegPos5VC1:
@@ -436,6 +467,18 @@ unsigned short GetRegValue(unsigned short reg)
 			signed short res = (signed short)val;
 			return res;
 		}
+	case ModbusRegPhAB:
+		{
+			return logic.DegPhAB;
+		}
+	case ModbusRegPhBC:
+		{
+			return logic.DegPhBC;
+		}
+	case ModbusRegPhCA:
+		{
+			return logic.DegPhCA;
+		}
 	case ModbusRegPMFrq:
 		{
 			return (unsigned short)logic.PMFreq;
@@ -481,6 +524,13 @@ bool OnSetRegValue(unsigned short regAddr, unsigned short value)
 			
 			return false;
 		}
+	case ModbusRegCtrl:
+		{
+			ModbusRegCtrlStruct *reg = (ModbusRegCtrlStruct *)&value;
+			SignalDO_YPrt::Set(reg->YPrt);
+			SignalDO_RPrt::Set(reg->RPrt);
+			return true;
+		}
 	}
 	
 	return false;
@@ -524,10 +574,10 @@ int main()
 	Timer::Start(Timer::ClockSourceFromPrescalerDiv256);
 	
 	ScanTimer::SetWaveformGenerationMode(ScanTimer::WaveformGenerationModeClearTimerOnCompareMatch);
-	// ExtClockSourceFreq / 64 / 10000 = 25 это типа 10000 раз в секунду
-	ScanTimer::SetOutputCompareAValue(25);
+	// ExtClockSourceFreq / 8 / 10000 = 200 это типа 10000 раз в секунду
+	ScanTimer::SetOutputCompareAValue(200);
 	ScanTimer::SetInterruptEnable(ScanTimer::InterruptOutputCompareMatchA);
-	ScanTimer::Start(ScanTimer::ClockSourceFromPrescalerDiv64);
+	ScanTimer::Start(ScanTimer::ClockSourceFromPrescalerDiv8);
 	
 	// ¬ходы ј÷ѕ
 	Lib::Gpio::A::SetInputPin(0);
