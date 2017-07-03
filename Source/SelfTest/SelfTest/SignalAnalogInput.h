@@ -19,6 +19,8 @@ class SignalAnalogInput
 protected:
 	static float _value;
 	static float _ref;
+	volatile static bool _lock;
+	static float _output;
 public:
 	static void Init(float ref)
 	{
@@ -29,10 +31,13 @@ public:
 	static void Reset()
 	{
 		_value = 0;
+		_lock = false;
+		_output = 0;
 	}
 	
 	static void Update()
 	{
+		/*
 		// двойное измерение, что исключить "дрыганье"
 		float val1 = Adc::DoConversion(ch);
 		bool ok = false;
@@ -52,19 +57,37 @@ public:
 		_value = val1;
 		
 		// а вообще по-нормальному надо так
-		//_value = Adc::DoConversion(ch);
+		*/
+		
+		float val = Adc::DoConversion(ch);
 		
 		if (MaxValue > 0)
 		{
-			_value /= MaxValue;
+			val /= MaxValue;
 		}
 		
-		_value *= _ref;
+		val *= _ref;
+		
+		while(_lock)
+		{
+			;
+		}
+		
+		_lock = true;
+		_value = val;
+		_lock = false;
 	}
 	
 	static float Get()
 	{
-		return _value;
+		if (!_lock)
+		{
+			_lock = true;
+			_output = _value;
+			_lock = false;
+		}
+		
+		return _output;
 	}
 };
 
@@ -73,5 +96,11 @@ float SignalAnalogInput<Adc, ChennelValueType, ch, MaxValue>::_value = 0;
 
 template <class Adc, typename ChennelValueType, ChennelValueType ch, unsigned short MaxValue>
 float SignalAnalogInput<Adc, ChennelValueType, ch, MaxValue>::_ref = 0;
+
+template <class Adc, typename ChennelValueType, ChennelValueType ch, unsigned short MaxValue>
+bool SignalAnalogInput<Adc, ChennelValueType, ch, MaxValue>::_lock = false;
+
+template <class Adc, typename ChennelValueType, ChennelValueType ch, unsigned short MaxValue>
+float SignalAnalogInput<Adc, ChennelValueType, ch, MaxValue>::_output = 0;
 
 #endif
