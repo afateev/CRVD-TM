@@ -117,7 +117,7 @@ typedef SignalDiscreteInput<Lib::Gpio::B, 2, true> SignalD_SC;
 typedef SignalPulseDetector<SignalD_SC> SignalSCPulseDetector;
 typedef SignalDiscreteInput<Lib::Gpio::B, 3, true> SignalD_50HzImp;
 typedef SignalPulseDetector<SignalD_50HzImp> Signal50HzPulseDetector;
-typedef SignalDiscreteInput<Lib::Gpio::B, 4, false> SignalD_MainReg;
+typedef SignalDiscreteInput<Lib::Gpio::B, 4, true> SignalD_MainReg;
 typedef SignalDiscreteInput<Lib::Gpio::D, 5, true> SignalD_Rdy;
 typedef SignalDiscreteOutput<Lib::Gpio::C, 0, false> SignalDO_IPCtrl_R;
 typedef SignalDiscreteOutput<Lib::Gpio::C, 1, false> SignalDO_IPCtrl_G;
