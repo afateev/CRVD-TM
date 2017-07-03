@@ -231,7 +231,7 @@ public:
 		ph *= 360;
 		ph /= SignalD_SC::NormalTickCount;
 		im->DegPhCA = ph;
-		im->DegPhCAError = (ph < 120 - 120 * 0.1) || (ph > 120 + 120 * 0.1);
+		im->DegPhCAError = IsError(ph);
 	}
 	
 	static void OnFrontB(void *calbackParam)
@@ -252,7 +252,7 @@ public:
 		ph *= 360;
 		ph /= SignalD_SA::NormalTickCount;
 		im->DegPhAB = ph;
-		im->DegPhABError = (ph < 120 - 120 * 0.1) || (ph > 120 + 120 * 0.1);
+		im->DegPhABError = IsError(ph);
 	}
 	
 	static void OnFrontC(void *calbackParam)
@@ -273,7 +273,17 @@ public:
 		ph *= 360;
 		ph /= SignalD_SB::NormalTickCount;
 		im->DegPhBC = ph;
-		im->DegPhBCError = (ph < 120 - 120 * 0.1) || (ph > 120 + 120 * 0.1);
+		im->DegPhBCError = IsError(ph);
+	}
+	
+	static bool IsError(unsigned int ph)
+	{
+		bool norma = false;
+		
+		norma |= (ph >= 120 - 120 * 0.1) && (ph <= 120 + 120 * 0.1);
+		norma |= (ph >= 240 - 240 * 0.1) && (ph <= 240 + 240 * 0.1);
+		
+		return !norma;
 	}
 };
 
