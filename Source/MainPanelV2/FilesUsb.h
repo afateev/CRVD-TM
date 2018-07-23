@@ -3,6 +3,10 @@
 
 #include "Drivers.h"
 
+#ifdef OSC_DIRECT_DISK_CACHE
+#include "diskio.h"
+#endif
+
 enum FatState
 {
 	FatStateInit = 0,
@@ -173,6 +177,8 @@ void FileSystemReady(bool &ready)
 {
 	ready = fatState == FatStateReady;
 }
+
+#ifndef OSC_DIRECT_DISK_CACHE
 
 void OscCacheCreateFile(unsigned int fileNumber, unsigned int oscFileSize, bool &result)
 {
@@ -346,6 +352,253 @@ void CopyOscData(char *dstFileName, unsigned int fileNumber, unsigned int dataOf
 		f_close(&srcFile);
 	}
 }
+
+#endif
+
+#ifdef OSC_DIRECT_DISK_CACHE
+
+struct OscCacheState
+{
+public:
+	static const unsigned int FileSize = 65536;
+public:
+	bool Ready;
+	unsigned int SectorsCount;
+	unsigned int SectorSize;
+public:
+	OscCacheState()
+	{
+		Ready = false;
+		SectorsCount = 0;
+		SectorSize = 0;
+	}
+	
+	unsigned int FirstSector()
+	{
+		return SectorsCount >> 1;
+	}
+	
+	unsigned int GetSector(unsigned int fileNumber)
+	{
+		unsigned long long sector = FileSize;
+		sector *= fileNumber;
+		sector /= SectorSize;
+		return FirstSector() + sector;
+	}
+	
+	unsigned int GetSector(unsigned int fileNumber, unsigned int offset)
+	{
+		unsigned long long sector = GetSector(fileNumber);
+		sector += offset / SectorSize;
+		return sector;
+	}
+};
+
+OscCacheState oscCacheState;
+
+void OscCacheEnable(unsigned int sectorsCount, unsigned short sectorSize)
+{
+	oscCacheState.Ready = true;
+	oscCacheState.SectorsCount = sectorsCount;
+	oscCacheState.SectorSize = sectorSize;
+}
+
+void OscCacheDisable()
+{
+	oscCacheState.Ready = true;
+}
+
+void OscCacheCreateFile(unsigned int fileNumber, unsigned int oscFileSize, bool &result)
+{
+	if (!oscCacheState.Ready)
+	{
+		return;
+	}
+	
+	result = true;
+}
+
+void OscCacheDeleteFile(unsigned int fileNumber, bool &result)
+{
+	if (!oscCacheState.Ready)
+	{
+		return;
+	}
+	
+	result = true;
+}
+
+unsigned char _oscCacheSectorBuffer[512];
+
+void OscCacheWriteFile(unsigned int fileNumber, unsigned int offset, unsigned char *data, unsigned int count, bool &result)
+{
+	if (!oscCacheState.Ready)
+	{
+		return;
+	}
+	
+	unsigned int sector = oscCacheState.GetSector(fileNumber);
+	sector += offset / oscCacheState.SectorSize;
+	
+	unsigned int sectorOffset = offset % oscCacheState.SectorSize;
+	
+	bool res = true;
+	unsigned int writeCount = 0;
+	unsigned int partSize = oscCacheState.SectorSize - sectorOffset;
+	while(res && writeCount < count)
+	{
+		res = disk_read(0, _oscCacheSectorBuffer, sector, 1) == 0;
+		if (res)
+		{
+			for (int i = 0; i < partSize; i++)
+			{
+				_oscCacheSectorBuffer[sectorOffset + i] = data[writeCount + i];
+			}
+			
+			res = disk_write(0, _oscCacheSectorBuffer, sector, 1) == 0;
+			
+			if (res)
+			{
+				writeCount += partSize;
+				sectorOffset = 0;
+				partSize = count - writeCount;
+				if (partSize > oscCacheState.SectorSize)
+				{
+					partSize = oscCacheState.SectorSize;
+				}
+				sector++;
+			}
+		}
+	}
+	
+	result = res;
+}
+
+void OscCacheReadFile(unsigned int fileNumber, unsigned int offset, unsigned char *data, unsigned int count, bool &result)
+{
+	if (!oscCacheState.Ready && data == 0)
+	{
+		return;
+	}
+	
+	unsigned int sector = oscCacheState.GetSector(fileNumber);
+	sector += offset / oscCacheState.SectorSize;
+	
+	unsigned int sectorOffset = offset % oscCacheState.SectorSize;
+	
+	bool res = true;
+	unsigned int readCount = 0;
+	unsigned int partSize = oscCacheState.SectorSize - sectorOffset;
+	while(res && readCount < count)
+	{
+		res = disk_read(0, _oscCacheSectorBuffer, sector, 1) == 0;
+		if (res)
+		{
+			for (int i = 0; i < partSize; i++)
+			{
+				data[readCount + i] = _oscCacheSectorBuffer[sectorOffset + i];
+			}
+			
+			readCount += partSize;
+			sectorOffset = 0;
+			partSize = count - readCount;
+			if (partSize > oscCacheState.SectorSize)
+			{
+				partSize = oscCacheState.SectorSize;
+			}
+			sector++;
+		}
+	}
+	
+	result = res;
+}
+
+unsigned char _oscDataCopyBuffer[256];
+
+void CopyOscData(char *dstFileName, unsigned int fileNumber, unsigned int dataOffset, int startPos, int endPos)
+{
+	if (!oscCacheState.Ready)
+	{
+		return;
+	}
+	
+	int partStart[2] = {0, 0};
+	int partCount[2] = {0, 0};
+	int partFileNumber[2] = {0, 0};
+	
+	if (startPos < 0 && endPos < 0xFFFF)
+	{
+		partCount[0] = -startPos;
+		partStart[0] = 0xFFFF - partCount[0];
+		partFileNumber[0] = fileNumber - 1;
+		partStart[1] = 0;
+		partCount[1] = endPos;
+		partFileNumber[1] = fileNumber;
+	}
+	
+	if (startPos >= 0 && endPos > 0xFFFF)
+	{
+		partStart[0] = startPos;
+		partCount[0] = 0xFFFF - partStart[0];
+		partFileNumber[0] = fileNumber;
+		partStart[1] = 0;
+		partCount[1] = endPos - 0xFFFF;
+		partFileNumber[1] = fileNumber + 1;
+	}
+	
+	if (startPos >= 0 && endPos < 0xFFFF)
+	{
+		partStart[0] = startPos;
+		partCount[0] = endPos - startPos;
+		partFileNumber[0] = fileNumber;
+	}
+	
+	unsigned int writeOffset = 0;
+	
+	for (int p = 0; p < 2; p++)
+	{
+	
+		partStart[p] *= OscFileFormat::OscRecordSize;
+		partCount[p] *= OscFileFormat::OscRecordSize;
+		
+		if (partCount[p] <= 0)
+		{
+			continue;
+		}
+
+		bool result = true;
+		
+		FIL dstFile;
+		result &= f_open(&dstFile, dstFileName, FA_READ | FA_WRITE | FA_OPEN_ALWAYS) == FR_OK;
+		
+		int copyCount = partCount[p];
+		unsigned int startOffset = partStart[p];
+		int i = 0;
+		
+		while (i < copyCount)
+		{
+			int portionSize = copyCount - i;
+			if (portionSize > sizeof(_oscDataCopyBuffer))
+			{
+				portionSize = sizeof(_oscDataCopyBuffer);
+			}
+			
+			result = false;
+			OscCacheReadFile(partFileNumber[p], startOffset + i, _oscDataCopyBuffer, portionSize, result);
+			
+			result &= f_lseek(&dstFile, dataOffset + writeOffset) == FR_OK;
+			unsigned int writed = 0;
+			result &= f_write(&dstFile, _oscDataCopyBuffer, portionSize, &writed);
+			result &= writed == portionSize;
+			i += portionSize;
+			writeOffset += portionSize;
+		}
+		
+		f_close(&dstFile);
+	}
+}
+
+#endif
 
 bool OscFilesRead(const char *fileName, long int offset, int origin, unsigned char *data, unsigned int count)
 {

@@ -704,6 +704,20 @@ int main()
 				if (f_mount(&USBDISKFatFs, (TCHAR const*)USBDISKPath, 0) == FR_OK)
 				{
 					fatState = FatStateConnected;
+#ifdef OSC_DIRECT_DISK_CACHE
+					unsigned int diskSize = 0;
+					unsigned short sectorSize = 0;
+					bool res = disk_ioctl(0, GET_SECTOR_COUNT, &diskSize) == 0;
+					if (res)
+					{
+						res = disk_ioctl(0, GET_SECTOR_SIZE, &sectorSize) == 0;
+
+						if (res)
+						{
+							OscCacheEnable(diskSize, sectorSize);
+						}
+					}
+#endif
 				}
 				else
 				{
@@ -720,6 +734,9 @@ int main()
 			{
 				f_mount(NULL, (TCHAR const*)"", 0);
 				fatState = FatStateDisconnected;
+#ifdef OSC_DIRECT_DISK_CACHE
+				OscCacheDisable();
+#endif
 			}
 			break;
 		}

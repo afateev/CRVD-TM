@@ -775,8 +775,8 @@ public:
 			if (_currentRun > 0)
             {
                 unsigned long notSaved = _currentRun - _workTimeAllreadySaved;
-                // если натикало с момента последнего сохранения больше чем минуту, то пора сохранить
-                if (notSaved >= 60)
+                // если натикало с момента последнего сохранения больше чем час, то пора сохранить
+                if (notSaved >= 3600)
                     needWrite = true;
                 if (!GetFlagEngineOn() && notSaved > 0)
                 {
