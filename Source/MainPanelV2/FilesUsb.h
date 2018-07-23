@@ -360,7 +360,7 @@ void CopyOscData(char *dstFileName, unsigned int fileNumber, unsigned int dataOf
 struct OscCacheState
 {
 public:
-	static const unsigned int FileSize = 65536;
+	static const unsigned int FileSize = 65536 * OscFileFormat::OscRecordSize;
 public:
 	bool Ready;
 	unsigned int SectorsCount;
