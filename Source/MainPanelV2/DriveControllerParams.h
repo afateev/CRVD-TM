@@ -199,10 +199,10 @@ protected:
 	static const unsigned char StateReg = 0x06;
 	static const unsigned char StopReg = 0x08;
 	
-	__no_init static unsigned long _currentRun;			// сколько прошло с момента текущего запуска
-	static unsigned long _lastRun;              // премя предыдущего запуска
-    static unsigned long _workTimeAllreadySaved;// то что уже сохранено после текущего запуска
-	static unsigned long _workTimeTotal;		// то что накоплено в файле всего
+	__no_init static unsigned long _currentRun;				// сколько прошло с момента текущего запуска
+	static unsigned long _lastRun;              			// премя предыдущего запуска
+    __no_init static unsigned long _workTimeAllreadySaved;	// то что уже сохранено после текущего запуска
+	static unsigned long _workTimeTotal;					// то что накоплено в файле всего
 	static bool _workTimeReaded;
 	
 	static const char _fileUptime[];
@@ -890,6 +890,7 @@ public:
 	static void ResetUpTime()
 	{
 		_currentRun = 0;
+		_workTimeAllreadySaved = 0;
 	}
 	
 	static long GetOperatingTime()
@@ -981,7 +982,7 @@ template<class ControllerInterfaceType, class Config>
 unsigned long DriveControllerParams<ControllerInterfaceType, Config>::_lastRun = 0;
 
 template<class ControllerInterfaceType, class Config>
-unsigned long DriveControllerParams<ControllerInterfaceType, Config>::_workTimeAllreadySaved = 0;
+unsigned long DriveControllerParams<ControllerInterfaceType, Config>::_workTimeAllreadySaved;
 
 template<class ControllerInterfaceType, class Config>
 unsigned long DriveControllerParams<ControllerInterfaceType, Config>::_workTimeTotal = 0;
