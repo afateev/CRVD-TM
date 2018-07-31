@@ -233,7 +233,10 @@ protected:
 	static FileCallback *_readFile;
 	static FileCallback *_writeFile;
 	static FileSeekCallback *_seekFile;
-	static Event _lastEvent;
+	__no_init static time_t _lastEventDt;
+	__no_init static EventCode _lastEventCode;
+	__no_init static int _lastEventParam;
+	 static Event _lastEvent;
 public:
 	static void Init(FileCallback *read, FileCallback *write, FileSeekCallback *seek)
 	{
@@ -259,6 +262,9 @@ public:
 		case EventCheckoutStart:
 		case EventCheckoutStop:
 			_lastEvent = event;
+			_lastEventDt = _lastEvent.GetData()._dt;
+			_lastEventCode = _lastEvent.GetData()._code;
+			_lastEventParam = _lastEvent.GetData()._param;
 			break;
 		}
 	}
@@ -377,7 +383,16 @@ template<unsigned int MaxCount, unsigned int CacheSize>
 EventLog<MaxCount, CacheSize>::QueueType EventLog<MaxCount, CacheSize>::_events;
 
 template<unsigned int MaxCount, unsigned int CacheSize>
-Event EventLog<MaxCount, CacheSize>::_lastEvent;
+time_t EventLog<MaxCount, CacheSize>::_lastEventDt;
+
+template<unsigned int MaxCount, unsigned int CacheSize>
+EventCode EventLog<MaxCount, CacheSize>::_lastEventCode;
+
+template<unsigned int MaxCount, unsigned int CacheSize>
+int EventLog<MaxCount, CacheSize>::_lastEventParam;
+
+template<unsigned int MaxCount, unsigned int CacheSize>
+Event EventLog<MaxCount, CacheSize>::_lastEvent(EventLog<MaxCount, CacheSize>::_lastEventDt, EventLog<MaxCount, CacheSize>::_lastEventCode, EventLog<MaxCount, CacheSize>::_lastEventParam);
 
 template<unsigned int MaxCount, unsigned int CacheSize>
 Event::EventData EventLog<MaxCount, CacheSize>::_eventsCache[CacheSize];
