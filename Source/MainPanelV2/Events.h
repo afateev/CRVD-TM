@@ -99,9 +99,9 @@ public:
 		switch(_data._code)
 		{
 		case EventDriveStart:
-			return "Двигатель включен";
+			return "Двигатель ВКЛЮЧЕН";
 		case EventDriveStop:
-			return "Двигатель отключен";
+			return "Двигатель ОСТАНОВЛЕН";
 		case EventEnergizingOn:
 			return "Возбуждение включено";
 		case EventEnergizingOff:
