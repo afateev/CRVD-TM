@@ -878,6 +878,8 @@ public:
             return;
         
         _workTimeTotal = 0;
+		
+		ResetUpTime();
     }
 	
 	static long GetUpTime()
@@ -893,9 +895,14 @@ public:
 		_workTimeAllreadySaved = 0;
 	}
 	
-	static long GetOperatingTime()
+	static unsigned long GetOperatingTime()
 	{
 		return _workTimeTotal - _workTimeAllreadySaved + _currentRun;
+	}
+	
+	static void GetOperatingTime(unsigned long &val)
+	{
+		val = GetOperatingTime();
 	}
 	
 	static int GetRegValue(unsigned char reg)

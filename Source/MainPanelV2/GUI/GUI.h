@@ -175,8 +175,8 @@ void DesctopInit()
 	wndEvents.SetOnClose(OnWindowClose);
 	wndConfigSystemDateTime.SetOnClose(OnWindowClose);
 	wndResetOperatingTime.SetOnClose(OnWindowClose);
-	// TODO wndResetOperatingTime.GetOperatingTimeCallback = ActiveDriveControllerParams::GetOperatingTime();
-	// TODO wndResetOperatingTime.ResetOperatingTimeCallback = ActiveDriveControllerParams::ResetOperatingTime();
+	wndResetOperatingTime.GetOperatingTimeCallback = ActiveDriveControllerParams::GetOperatingTime;
+	wndResetOperatingTime.ResetOperatingTimeCallback = ActiveDriveControllerParams::ResetOperatingTime;
 	wndOscList.SetOnClose(OnWindowClose);
 	
 	wndDiagnosticRegulatorMain.SetOnClose(OnWindowClose);
