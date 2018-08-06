@@ -1,5 +1,5 @@
 
-#define VERSION_STRING "Версия ПО от 06.08.2018 22:40 рев. 102"
+#define VERSION_STRING "Версия ПО от 06.08.2018 23:30 рев. 103"
 
 #include "../RbLib/Rblib.h"
 
@@ -32,6 +32,10 @@ SideIndicators<Drivers::StatorDisplay, Drivers::RotorDisplay, ActiveDriveControl
 typedef OscCacheImplementer<PrimaryController::OscRecordSize, PrimaryController::OscRequestMaxPortionSize> OscCacheType;
 
 OscCacheType OscCache;
+
+#ifdef USB_STORAGE
+IWDG_HandleTypeDef IWDG_InitStruct;
+#endif
 
 void GetMainWindowDisplayData(MainWindowDisplayData &displayData)
 {
@@ -132,6 +136,9 @@ static void OnKiloHertzTimerTick()
 	{
 		statorRototIndecatorsUpdateCounter = 0;
 		StatorRotorIndicators.Update();
+#ifdef USB_STORAGE
+		HAL_IWDG_Refresh(&IWDG_InitStruct);
+#endif
 	}
 #endif
 	
@@ -396,6 +403,11 @@ static void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;  
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;  
   HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5);
+  
+  IWDG_InitStruct.Instance = IWDG;
+  IWDG_InitStruct.Init.Prescaler = IWDG_PRESCALER_128;
+  IWDG_InitStruct.Init.Reload = 32000 / 128 * 5; // 5 секунд
+  HAL_IWDG_Init(&IWDG_InitStruct);
 }
 
 extern HCD_HandleTypeDef hhcd;
