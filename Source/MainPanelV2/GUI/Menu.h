@@ -90,6 +90,7 @@ protected:
 	MenuItem *_list[MaxCount];
 	unsigned char _size;
 	char *_header;
+	char *_footer;
 	signed char _selected;
 public:
 	MenuItemList(char *header)
@@ -97,6 +98,15 @@ public:
 		_size = 0;
 		_selected = 0;
 		_header = header;
+		_footer = 0;
+	}
+	
+	MenuItemList(char *header, char *footer)
+	{
+		_size = 0;
+		_selected = 0;
+		_header = header;
+		_footer = footer;
 	}
 	
 	inline unsigned char Size()
@@ -125,6 +135,11 @@ public:
 	inline char *GetHeader()
 	{
 		return _header;
+	}
+	
+	inline char * GetFooter()
+	{
+		return _footer;
 	}
 	
 	inline bool Selected(unsigned char i)
@@ -443,6 +458,14 @@ public:
 			}
 			if (_showScrollBar)
 				DrawScrollBar();
+			
+			char *footer = _current->GetFooter();
+			if (footer)
+			{
+				len = sprintf(str, footer);
+				display.MoveCursorTo(0, 240 - 16);
+				display.WriteLine(str, len);
+			}
 		}
 		
 		display.Flush();

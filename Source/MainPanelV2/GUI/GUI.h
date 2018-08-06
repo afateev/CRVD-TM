@@ -45,7 +45,7 @@ void ShowOsc(MenuItemListBase *sender)
 }
 
 MenuItemList menuListRoot("Главное меню");
-MenuItemList menuListSystemSetup("Настройка системных параметров");
+MenuItemList menuListSystemSetup("Настройка системных параметров", VERSION_STRING);
 MenuItemList menuListModbusSetup("Настройка Modbus");
 MenuItemList menuListControllerSetup("Параметры регулятора");
 MenuItemList menuListControllerUstSetup("Уставки регулирования");

@@ -1,4 +1,6 @@
 
+#define VERSION_STRING "Версия ПО от 06.08.2018 22:40 рев. 102"
+
 #include "../RbLib/Rblib.h"
 
 #ifdef SD_STORAGE
